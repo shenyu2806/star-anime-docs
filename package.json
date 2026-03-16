@@ -1,0 +1,19 @@
+{
+  "name": "star-anime-docs",
+  "version": "1.0.0",
+  "description": "StarAnime 项目文档",
+  "scripts": {
+    "dev": "vuepress dev .",
+    "build": "vuepress build ."
+  },
+  "devDependencies": {
+    "vuepress": "2.0.0-rc.19",
+    "vuepress-theme-reco": "2.0.0-rc.26",
+    "@vuepress/bundler-vite": "2.0.0-rc.19"
+  },
+  "overrides": {
+    "prismjs": "1.29.0",
+    "markdown-it": "14.1.0",
+    "execa": "9.5.2"
+  }
+}

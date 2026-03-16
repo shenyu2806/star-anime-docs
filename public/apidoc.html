@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarAnime API 文档</title>
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-sidebar: #13161f;
+    --bg-input: #0d0f16;
+    --border: #2a2d3e;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --text-dim: #4a5568;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --orange: #f97316;
+    --cyan: #06b6d4;
+    --radius: 8px;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ===== 配置弹窗 ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    width: 460px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px; box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-header h2 { font-size: 17px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-section { margin-bottom: 20px; }
+  .modal-section-title {
+    font-size: 11px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.8px;
+    text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+  .form-group input {
+    width: 100%; padding: 9px 12px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-size: 13px; font-family: var(--font-mono); outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--primary); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-primary {
+    flex: 1; padding: 10px; background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary {
+    padding: 10px 20px; background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
+  .modal-err { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 18px; }
+  .modal-tip { color: var(--text-dim); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  /* ===== 主界面 ===== */
+  #app { display: none; height: 100vh; overflow: hidden; }
+  .layout { display: flex; height: 100%; }
+
+  /* 侧边栏 */
+  .sidebar {
+    width: 280px; flex-shrink: 0; background: var(--bg-sidebar);
+    border-right: 1px solid var(--border); overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-header .logo { font-size: 20px; }
+  .sidebar-header .title { font-size: 15px; font-weight: 700; }
+  .sidebar-header .version {
+    margin-left: auto; font-size: 11px; color: var(--text-muted);
+    background: rgba(99,102,241,0.15); color: var(--primary);
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .sidebar-search {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-search input {
+    width: 100%; padding: 7px 10px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-size: 13px; outline: none;
+  }
+  .sidebar-search input:focus { border-color: var(--primary); }
+  .nav-group { padding: 8px 0; }
+  .nav-group-title {
+    padding: 6px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+    color: var(--text-dim); text-transform: uppercase;
+  }
+  .nav-item {
+    padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-muted); transition: all 0.15s; border-radius: 0;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: rgba(99,102,241,0.08); color: var(--text); }
+  .nav-item.active { background: rgba(99,102,241,0.12); color: var(--primary); border-left-color: var(--primary); }
+  .nav-item .method-badge {
+    font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+    flex-shrink: 0; font-family: var(--font-mono);
+  }
+  .nav-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  /* 侧边栏底部配置区 */
+  .sidebar-footer {
+    margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border);
+  }
+  .server-status {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .server-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .server-dot.online { background: var(--green); }
+  .server-url { font-family: var(--font-mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .footer-actions { display: flex; gap: 8px; }
+  .btn-footer {
+    flex: 1; padding: 6px 0; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text-muted); font-size: 12px; cursor: pointer;
+    transition: all 0.2s; text-align: center;
+  }
+  .btn-footer:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-footer.active { background: rgba(99,102,241,0.1); border-color: var(--primary); color: var(--primary); }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px; padding: 8px 0; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .user-info .name { font-size: 12px; font-weight: 600; }
+  .user-info .role { font-size: 11px; color: var(--text-muted); }
+
+  /* 主内容区 */
+  .main { flex: 1; overflow-y: auto; padding: 0; }
+  .welcome {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; flex-direction: column; gap: 12px; color: var(--text-muted);
+  }
+  .welcome .big-icon { font-size: 64px; }
+  .welcome h2 { font-size: 20px; color: var(--text); }
+  .welcome p { font-size: 14px; }
+
+  /* API 详情 */
+  .api-detail { padding: 32px 40px; max-width: 900px; }
+  .api-title { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .api-title h1 { font-size: 22px; font-weight: 700; }
+  .api-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+
+  .method-path {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 24px;
+    font-family: var(--font-mono); font-size: 14px;
+  }
+  .method-big {
+    font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+  .path-text { color: var(--text); }
+  .auth-badge {
+    margin-left: auto; font-size: 11px; padding: 2px 8px;
+    border-radius: 4px; display: flex; align-items: center; gap: 4px;
+  }
+  .auth-badge.required { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .auth-badge.optional { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+  .auth-badge.none { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .perm-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 4px;
+    background: rgba(139,92,246,0.12); color: var(--purple); border: 1px solid rgba(139,92,246,0.3);
+  }
+
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;
+    text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* 参数表格 */
+  .param-table { width: 100%; border-collapse: collapse; }
+  .param-table th {
+    text-align: left; padding: 8px 12px; font-size: 12px; font-weight: 600;
+    color: var(--text-dim); background: var(--bg-input); border-bottom: 1px solid var(--border);
+  }
+  .param-table th:first-child { border-radius: 6px 0 0 0; }
+  .param-table th:last-child { border-radius: 0 6px 0 0; }
+  .param-table td {
+    padding: 9px 12px; font-size: 13px; border-bottom: 1px solid rgba(42,45,62,0.5);
+    vertical-align: top;
+  }
+  .param-table tr:last-child td { border-bottom: none; }
+  .param-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .param-name { font-family: var(--font-mono); color: var(--cyan); font-size: 12px; }
+  .param-type { font-family: var(--font-mono); color: var(--yellow); font-size: 12px; }
+  .param-required { color: var(--red); font-size: 12px; }
+  .param-optional { color: var(--text-dim); font-size: 12px; }
+  .param-desc { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+
+  /* 代码块 */
+  .code-block {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .code-header {
+    display: flex; align-items: center; padding: 8px 14px;
+    border-bottom: 1px solid var(--border); gap: 8px;
+  }
+  .code-lang { font-size: 12px; color: var(--text-dim); font-family: var(--font-mono); }
+  .btn-copy {
+    margin-left: auto; padding: 3px 10px; background: transparent;
+    border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted);
+    font-size: 11px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-copy:hover { border-color: var(--primary); color: var(--primary); }
+  pre { padding: 16px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; overflow-x: auto; color: var(--text); }
+
+  /* 调试面板 */
+  .debug-panel {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 28px;
+  }
+  .debug-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .debug-header h3 { font-size: 13px; font-weight: 700; color: var(--text); }
+  .debug-header .tip { font-size: 12px; color: var(--text-muted); }
+  .btn-run {
+    margin-left: auto; padding: 7px 18px; background: var(--primary);
+    border: none; border-radius: 6px; color: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s;
+  }
+  .btn-run:hover { background: var(--primary-dark); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+  .debug-body { padding: 16px; }
+  .debug-row { margin-bottom: 14px; }
+  .debug-row label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+  .debug-input {
+    width: 100%; padding: 8px 12px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-size: 13px; font-family: var(--font-mono); outline: none; transition: border-color 0.2s;
+  }
+  .debug-input:focus { border-color: var(--primary); }
+  textarea.debug-input { min-height: 90px; resize: vertical; line-height: 1.6; }
+  .debug-params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .debug-param-item label { font-size: 11px; }
+
+  .debug-response { padding: 16px; border-top: 1px solid var(--border); }
+  .response-meta {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12px;
+  }
+  .res-status { font-weight: 700; font-family: var(--font-mono); }
+  .res-status.ok { color: var(--green); }
+  .res-status.err { color: var(--red); }
+  .res-time { color: var(--text-muted); }
+  .res-size { color: var(--text-muted); }
+
+  /* 方法颜色 */
+  .m-GET    { background: rgba(16,185,129,0.15); color: var(--green); }
+  .m-POST   { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .m-PUT    { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .m-DELETE { background: rgba(239,68,68,0.15); color: var(--red); }
+  .m-PATCH  { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* 标签 */
+  .tag {
+    display: inline-block; font-size: 11px; padding: 1px 7px;
+    border-radius: 4px; font-weight: 600;
+  }
+  .tag-deprecated { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+  /* 空状态 */
+  .empty-response {
+    color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px 0;
+    font-family: var(--font-mono);
+  }
+
+  /* Token 状态 */
+  .token-status {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);
+    padding: 8px 14px; background: var(--bg-input); border-radius: 6px;
+    border: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .token-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .token-dot.off { background: var(--text-dim); }
+  .token-val { font-family: var(--font-mono); color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
+  .btn-clear-token {
+    margin-left: auto; padding: 2px 8px; background: transparent;
+    border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted);
+    font-size: 11px; cursor: pointer;
+  }
+  .btn-clear-token:hover { border-color: var(--red); color: var(--red); }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab-btn {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* JSON 高亮 */
+  .json-string { color: #a3e635; }
+  .json-number { color: #fb923c; }
+  .json-boolean { color: #818cf8; }
+  .json-null { color: #94a3b8; }
+  .json-key { color: #7dd3fc; }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 220px; }
+    .api-detail { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 配置弹窗（服务地址 + 可选登录） -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>⚙️ 接口配置</h2>
+      <button class="modal-close" onclick="closeConfigModal()">×</button>
+    </div>
+
+    <!-- 服务地址 -->
+    <div class="modal-section">
+      <div class="modal-section-title">服务地址</div>
+      <div class="form-group">
+        <label>API Base URL</label>
+        <input type="text" id="cfg-base-url" placeholder="http://localhost:8080/api" />
+      </div>
+    </div>
+
+    <!-- 可选登录 -->
+    <div class="modal-section">
+      <div class="modal-section-title">账号登录（可选）登录后自动携带 Token</div>
+      <div class="form-group">
+        <label>用户名 / 邮箱</label>
+        <input type="text" id="cfg-username" placeholder="留空则以游客身份浏览" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="cfg-password" placeholder="留空则不登录" autocomplete="current-password" />
+      </div>
+    </div>
+
+    <div class="modal-err" id="cfg-err"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeConfigModal()">取消</button>
+      <button class="btn-primary" id="cfg-save-btn" onclick="saveConfig()">保存并连接</button>
+    </div>
+    <div class="modal-tip">💡 不登录也可以查看文档和调试公开接口</div>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="app">
+  <div class="layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">🌟</span>
+        <span class="title">StarAnime API</span>
+        <span class="version">v1.0</span>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" placeholder="搜索接口..." id="search-input" oninput="filterNav(this.value)" />
+      </div>
+      <div id="nav-container"></div>
+      <div class="sidebar-footer">
+        <!-- 已登录用户信息（有登录时才显示） -->
+        <div class="user-badge" id="user-badge" style="display:none">
+          <div class="user-avatar" id="user-avatar-text">U</div>
+          <div class="user-info">
+            <div class="name" id="user-display-name">-</div>
+            <div class="role" id="user-display-role">-</div>
+          </div>
+        </div>
+        <!-- 服务地址状态 -->
+        <div class="server-status">
+          <div class="server-dot" id="server-dot"></div>
+          <span class="server-url" id="server-url-display">未配置服务地址</span>
+        </div>
+        <!-- 操作按钮 -->
+        <div class="footer-actions">
+          <button class="btn-footer" onclick="openConfigModal()" id="btn-config">⚙️ 配置</button>
+          <button class="btn-footer" onclick="doLogout()" id="btn-logout" style="display:none">退出登录</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="main" id="main-content">
+      <div class="welcome">
+        <div class="big-icon">📖</div>
+        <h2>StarAnime API 文档</h2>
+        <p>从左侧选择接口开始探索</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// API 数据
+// =====================================================
+const API_GROUPS = [
+  {
+    id: 'auth',
+    name: '🔐 认证',
+    apis: [
+      {
+        id: 'auth-register',
+        method: 'POST',
+        path: '/auth/register',
+        name: '用户注册',
+        desc: '注册新用户账号。注册功能可由管理员在系统设置中开启/关闭，关闭后返回 403。',
+        auth: 'none',
+        bodyParams: [
+          { name: 'username', type: 'string', required: true, desc: '用户名，唯一' },
+          { name: 'password', type: 'string', required: true, desc: '密码' },
+          { name: 'email', type: 'string', required: true, desc: '邮箱，唯一' },
+          { name: 'nickname', type: 'string', required: false, desc: '昵称，默认与用户名相同' },
+        ],
+        bodyExample: '{\n  "username": "testuser",\n  "password": "123456",\n  "email": "test@example.com",\n  "nickname": "测试用户"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "注册成功",\n  "data": {\n    "id": 1,\n    "username": "testuser",\n    "email": "test@example.com"\n  }\n}',
+      },
+      {
+        id: 'auth-login',
+        method: 'POST',
+        path: '/auth/login',
+        name: '用户登录',
+        desc: '使用用户名/邮箱和密码登录，获取 JWT Token。Token 需在后续请求的 Authorization 头中携带。',
+        auth: 'none',
+        bodyParams: [
+          { name: 'username', type: 'string', required: true, desc: '用户名或邮箱' },
+          { name: 'password', type: 'string', required: true, desc: '密码' },
+        ],
+        bodyExample: '{\n  "username": "admin",\n  "password": "123456"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "登录成功",\n  "data": {\n    "token": "eyJhbGci...",\n    "user": {\n      "id": 1,\n      "username": "admin",\n      "email": "admin@example.com",\n      "nickname": "管理员",\n      "avatar": null,\n      "role": 3,\n      "certifications": []\n    }\n  }\n}',
+      },
+      {
+        id: 'auth-refresh',
+        method: 'POST',
+        path: '/auth/refresh',
+        name: '刷新 Token',
+        desc: '用当前有效 Token 刷新获取新 Token，延长有效期（7天）。需携带 Bearer Token。',
+        auth: 'required',
+        bodyExample: '',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "token": "eyJhbGci..."\n  }\n}',
+      },
+      {
+        id: 'auth-logout',
+        method: 'POST',
+        path: '/auth/logout',
+        name: '退出登录',
+        desc: '销毁服务端 Redis 中的 Token，使其立即失效。',
+        auth: 'required',
+        bodyExample: '',
+        respExample: '{\n  "code": 200,\n  "message": "退出成功"\n}',
+      },
+    ]
+  },
+  {
+    id: 'user',
+    name: '👤 用户',
+    apis: [
+      {
+        id: 'user-info-get',
+        method: 'GET',
+        path: '/user/info',
+        name: '获取个人信息',
+        desc: '获取当前登录用户的详细信息，包含角色、认证等。',
+        auth: 'required',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "id": 1,\n    "username": "admin",\n    "nickname": "管理员",\n    "email": "admin@example.com",\n    "avatar": "http://...",\n    "role": 3,\n    "status": 1,\n    "created_at": "2024-01-01T00:00:00.000Z"\n  }\n}',
+      },
+      {
+        id: 'user-info-put',
+        method: 'PUT',
+        path: '/user/info',
+        name: '修改个人信息',
+        desc: '更新当前用户的昵称、简介等基本信息。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'nickname', type: 'string', required: false, desc: '昵称' },
+          { name: 'bio', type: 'string', required: false, desc: '个人简介' },
+        ],
+        bodyExample: '{\n  "nickname": "新昵称",\n  "bio": "这是我的简介"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "更新成功"\n}',
+      },
+      {
+        id: 'user-password',
+        method: 'PUT',
+        path: '/user/password',
+        name: '修改密码',
+        desc: '修改当前用户密码，需要提供旧密码验证。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'oldPassword', type: 'string', required: true, desc: '旧密码' },
+          { name: 'newPassword', type: 'string', required: true, desc: '新密码' },
+        ],
+        bodyExample: '{\n  "oldPassword": "old123",\n  "newPassword": "new456"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "密码修改成功"\n}',
+      },
+      {
+        id: 'user-avatar',
+        method: 'POST',
+        path: '/user/avatar',
+        name: '上传头像',
+        desc: '上传用户头像，Content-Type 为 multipart/form-data，字段名为 avatar。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'avatar', type: 'file', required: true, desc: '头像图片（multipart/form-data）' },
+        ],
+        bodyExample: '// multipart/form-data\nContent-Disposition: form-data; name="avatar"; filename="avatar.jpg"',
+        respExample: '{\n  "code": 200,\n  "message": "上传成功",\n  "data": {\n    "url": "http://.../uploads/avatar/xxx.jpg"\n  }\n}',
+      },
+      {
+        id: 'user-upload-image',
+        method: 'POST',
+        path: '/user/upload-image',
+        name: '上传图片',
+        desc: '通用图片上传（如番剧封面），字段名为 image。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'image', type: 'file', required: true, desc: '图片文件（multipart/form-data）' },
+        ],
+        bodyExample: '// multipart/form-data\nContent-Disposition: form-data; name="image"; filename="cover.jpg"',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "url": "http://.../uploads/image/xxx.jpg"\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'history',
+    name: '📺 观看历史',
+    apis: [
+      {
+        id: 'history-get',
+        method: 'GET',
+        path: '/user/history',
+        name: '获取观看历史',
+        desc: '获取当前用户的观看历史记录列表，按最近观看时间倒序。',
+        auth: 'required',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码，默认 1' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数，默认 20' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [\n      {\n        "id": 1,\n        "bangumi_id": 10,\n        "episode_id": 25,\n        "progress": 1200,\n        "updated_at": "2024-01-15T10:00:00.000Z",\n        "bangumi": { "title": "示例番剧", "cover": "..." },\n        "episode": { "title": "第1集" }\n      }\n    ],\n    "total": 50\n  }\n}',
+      },
+      {
+        id: 'history-post',
+        method: 'POST',
+        path: '/user/history',
+        name: '记录观看进度',
+        desc: '记录或更新用户对某集的观看进度（秒数）。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episode_id', type: 'number', required: true, desc: '剧集 ID' },
+          { name: 'progress', type: 'number', required: true, desc: '观看进度（秒）' },
+        ],
+        bodyExample: '{\n  "bangumi_id": 10,\n  "episode_id": 25,\n  "progress": 1200\n}',
+        respExample: '{\n  "code": 200,\n  "message": "记录成功"\n}',
+      },
+    ]
+  },
+  {
+    id: 'favorites',
+    name: '⭐ 收藏',
+    apis: [
+      {
+        id: 'fav-list',
+        method: 'GET',
+        path: '/user/favorites',
+        name: '收藏列表',
+        desc: '获取当前用户的番剧收藏列表。',
+        auth: 'required',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "bangumi": { "id": 10, "title": "示例番剧", "cover": "..." } }],\n    "total": 5\n  }\n}',
+      },
+      {
+        id: 'fav-check',
+        method: 'GET',
+        path: '/user/favorites/:bangumiId/check',
+        name: '检查收藏状态',
+        desc: '检查当前用户是否已收藏某番剧。',
+        auth: 'required',
+        pathParams: [{ name: 'bangumiId', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": { "isFavorited": true }\n}',
+      },
+      {
+        id: 'fav-add',
+        method: 'POST',
+        path: '/user/favorites',
+        name: '添加收藏',
+        auth: 'required',
+        bodyParams: [{ name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' }],
+        bodyExample: '{\n  "bangumi_id": 10\n}',
+        respExample: '{\n  "code": 200,\n  "message": "收藏成功"\n}',
+      },
+      {
+        id: 'fav-remove',
+        method: 'DELETE',
+        path: '/user/favorites/:bangumiId',
+        name: '取消收藏',
+        auth: 'required',
+        pathParams: [{ name: 'bangumiId', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "已取消收藏"\n}',
+      },
+    ]
+  },
+  {
+    id: 'blogger',
+    name: '✍️ 博主申请',
+    apis: [
+      {
+        id: 'blogger-apply',
+        method: 'POST',
+        path: '/user/apply-blogger',
+        name: '申请成为博主',
+        desc: '提交博主申请，需要填写申请理由。开关关闭时返回 403。',
+        auth: 'required',
+        bodyParams: [
+          { name: 'reason', type: 'string', required: true, desc: '申请理由' },
+        ],
+        bodyExample: '{\n  "reason": "我热爱动漫，希望为社区贡献内容"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "申请提交成功，请等待审核"\n}',
+      },
+      {
+        id: 'blogger-my-apply',
+        method: 'GET',
+        path: '/user/my-blogger-apply',
+        name: '我的博主申请',
+        desc: '查看当前用户最新的博主申请记录。',
+        auth: 'required',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "id": 1,\n    "reason": "我热爱动漫",\n    "status": 0,\n    "review_remark": null,\n    "created_at": "2024-01-01T00:00:00.000Z"\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'bangumi-apply',
+    name: '📝 番剧申请（博主）',
+    apis: [
+      {
+        id: 'ban-apply-post',
+        method: 'POST',
+        path: '/user/bangumi-apply',
+        name: '申请添加番剧',
+        desc: '博主提交番剧添加申请，需要审核通过后才会正式上线。',
+        auth: 'required',
+        perm: '博主',
+        bodyParams: [
+          { name: 'title', type: 'string', required: true, desc: '番剧标题' },
+          { name: 'description', type: 'string', required: false, desc: '番剧描述' },
+          { name: 'cover', type: 'string', required: false, desc: '封面图 URL' },
+          { name: 'genre', type: 'string', required: false, desc: '类型标签，逗号分隔' },
+          { name: 'region', type: 'string', required: false, desc: '地区' },
+          { name: 'year', type: 'number', required: false, desc: '年份' },
+          { name: 'total_episodes', type: 'number', required: false, desc: '总集数' },
+        ],
+        bodyExample: '{\n  "title": "某某番剧",\n  "description": "这是一部精彩的番剧",\n  "cover": "http://.../cover.jpg",\n  "genre": "热血,冒险",\n  "region": "日本",\n  "year": 2024,\n  "total_episodes": 24\n}',
+        respExample: '{\n  "code": 200,\n  "message": "申请已提交，等待审核"\n}',
+      },
+      {
+        id: 'ban-apply-get',
+        method: 'GET',
+        path: '/user/bangumi-apply',
+        name: '我的番剧申请',
+        desc: '博主查看自己提交的所有番剧申请记录。',
+        auth: 'required',
+        perm: '博主',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "title": "某某番剧", "status": 0 }],\n    "total": 3\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'resource',
+    name: '🎬 资源发布（博主）',
+    apis: [
+      {
+        id: 'resource-post',
+        method: 'POST',
+        path: '/user/resource',
+        name: '发布番剧资源',
+        desc: '博主为已上线番剧的某集提交视频资源，需要审核通过后对外显示。',
+        auth: 'required',
+        perm: '博主',
+        bodyParams: [
+          { name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episode_id', type: 'number', required: true, desc: '剧集 ID' },
+          { name: 'upload_id', type: 'string', required: true, desc: '分片上传完成后的 uploadId' },
+          { name: 'filename', type: 'string', required: false, desc: '原始文件名' },
+        ],
+        bodyExample: '{\n  "bangumi_id": 10,\n  "episode_id": 1,\n  "upload_id": "abc-uuid",\n  "filename": "ep01.mp4"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "资源提交成功，等待审核"\n}',
+      },
+      {
+        id: 'resource-get',
+        method: 'GET',
+        path: '/user/resource',
+        name: '我的资源列表',
+        desc: '博主查看自己提交的所有视频资源记录。',
+        auth: 'required',
+        perm: '博主',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "episode_id": 1, "status": 0 }],\n    "total": 5\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'upload',
+    name: '📤 视频上传',
+    apis: [
+      {
+        id: 'upload-config',
+        method: 'GET',
+        path: '/upload/config',
+        name: '获取上传配置',
+        desc: '获取上传相关配置，如分片大小、最大文件大小等。',
+        auth: 'required',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "chunkSize": 5242880,\n    "maxSize": 2147483648\n  }\n}',
+      },
+      {
+        id: 'upload-init',
+        method: 'POST',
+        path: '/upload/video/init',
+        name: '初始化分片上传',
+        desc: '博主开始分片上传视频前，初始化上传任务，返回 uploadId。',
+        auth: 'required',
+        perm: '博主',
+        bodyParams: [
+          { name: 'filename', type: 'string', required: true, desc: '文件名' },
+          { name: 'fileSize', type: 'number', required: true, desc: '文件大小（字节）' },
+          { name: 'totalChunks', type: 'number', required: true, desc: '总分片数' },
+        ],
+        bodyExample: '{\n  "filename": "episode01.mp4",\n  "fileSize": 524288000,\n  "totalChunks": 100\n}',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "uploadId": "abc-def-uuid"\n  }\n}',
+      },
+      {
+        id: 'upload-chunk',
+        method: 'POST',
+        path: '/upload/video/chunk',
+        name: '上传分片',
+        desc: '上传视频的某个分片，使用 multipart/form-data。',
+        auth: 'required',
+        perm: '博主',
+        bodyParams: [
+          { name: 'uploadId', type: 'string', required: true, desc: 'uploadId（form字段）' },
+          { name: 'chunkIndex', type: 'number', required: true, desc: '分片序号，从 0 开始（form字段）' },
+          { name: 'chunk', type: 'file', required: true, desc: '分片文件数据' },
+        ],
+        bodyExample: '// multipart/form-data\nuploadId=abc-def-uuid\nchunkIndex=0\nchunk=<binary>',
+        respExample: '{\n  "code": 200,\n  "message": "分片上传成功"\n}',
+      },
+      {
+        id: 'upload-merge',
+        method: 'POST',
+        path: '/upload/video/merge',
+        name: '合并分片',
+        desc: '所有分片上传完成后，触发合并，服务端自动进行转码处理。',
+        auth: 'required',
+        perm: '博主',
+        bodyParams: [
+          { name: 'uploadId', type: 'string', required: true, desc: 'uploadId' },
+        ],
+        bodyExample: '{\n  "uploadId": "abc-def-uuid"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "合并成功，正在转码"\n}',
+      },
+      {
+        id: 'upload-cancel',
+        method: 'DELETE',
+        path: '/upload/video/:uploadId',
+        name: '取消上传',
+        desc: '取消并清理未完成的上传任务及临时文件。',
+        auth: 'required',
+        perm: '博主',
+        pathParams: [{ name: 'uploadId', type: 'string', required: true, desc: '上传任务 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "已取消"\n}',
+      },
+    ]
+  },
+  {
+    id: 'bangumi-public',
+    name: '🎌 番剧（公开）',
+    apis: [
+      {
+        id: 'ban-search',
+        method: 'GET',
+        path: '/bangumi/search',
+        name: '搜索番剧',
+        desc: '根据关键词搜索番剧，支持标题模糊匹配。',
+        auth: 'none',
+        queryParams: [
+          { name: 'keyword', type: 'string', required: true, desc: '搜索关键词' },
+          { name: 'page', type: 'number', required: false, desc: '页码，默认 1' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数，默认 20' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "title": "某番剧", "cover": "..." }],\n    "total": 10\n  }\n}',
+      },
+      {
+        id: 'ban-latest',
+        method: 'GET',
+        path: '/bangumi/latest',
+        name: '最新番剧',
+        desc: '获取最近更新的番剧列表。',
+        auth: 'none',
+        queryParams: [
+          { name: 'limit', type: 'number', required: false, desc: '数量，默认 10' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": [{ "id": 1, "title": "某番剧", "cover": "..." }]\n}',
+      },
+      {
+        id: 'ban-recommend',
+        method: 'GET',
+        path: '/bangumi/recommend/list',
+        name: '推荐番剧',
+        desc: '获取推荐番剧列表。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": [{ "id": 1, "title": "某番剧", "cover": "..." }]\n}',
+      },
+      {
+        id: 'ban-list',
+        method: 'GET',
+        path: '/bangumi',
+        name: '番剧列表',
+        desc: '分页获取番剧列表，支持多维度筛选。',
+        auth: 'none',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+          { name: 'genre', type: 'string', required: false, desc: '类型筛选' },
+          { name: 'region', type: 'string', required: false, desc: '地区筛选' },
+          { name: 'year', type: 'number', required: false, desc: '年份筛选' },
+          { name: 'status', type: 'number', required: false, desc: '状态：0=连载 1=完结' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "title": "某番剧", "cover": "..." }],\n    "total": 100\n  }\n}',
+      },
+      {
+        id: 'ban-detail',
+        method: 'GET',
+        path: '/bangumi/:id',
+        name: '番剧详情',
+        auth: 'none',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "id": 1,\n    "title": "某番剧",\n    "description": "...",\n    "cover": "http://...",\n    "genre": "热血,冒险",\n    "region": "日本",\n    "year": 2024,\n    "total_episodes": 24,\n    "status": 0\n  }\n}',
+      },
+      {
+        id: 'ban-episodes',
+        method: 'GET',
+        path: '/bangumi/:id/episodes',
+        name: '剧集列表',
+        auth: 'none',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "title": "第1集", "episode_number": 1 }\n  ]\n}',
+      },
+      {
+        id: 'ban-episode-detail',
+        method: 'GET',
+        path: '/bangumi/:bangumiId/episode/:episodeId',
+        name: '单集详情',
+        auth: 'none',
+        pathParams: [
+          { name: 'bangumiId', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episodeId', type: 'number', required: true, desc: '剧集 ID' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "id": 1,\n    "title": "第1集",\n    "episode_number": 1,\n    "video_url": "http://.../video.m3u8"\n  }\n}',
+      },
+      {
+        id: 'ban-rating-stats',
+        method: 'GET',
+        path: '/bangumi/:id/rating',
+        name: '番剧评分分布',
+        auth: 'none',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "average": 8.5,\n    "total": 120,\n    "distribution": { "1": 2, "2": 3, "10": 30 }\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'comments-public',
+    name: '💬 评论',
+    apis: [
+      {
+        id: 'comment-list',
+        method: 'GET',
+        path: '/bangumi/:id/comments',
+        name: '番剧评论列表',
+        auth: 'none',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "content": "很好看！", "user": { "nickname": "用户A" } }],\n    "total": 50\n  }\n}',
+      },
+      {
+        id: 'comment-add',
+        method: 'POST',
+        path: '/user/comments',
+        name: '发表评论',
+        auth: 'required',
+        bodyParams: [
+          { name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episode_id', type: 'number', required: false, desc: '剧集 ID（为空则是番剧评论）' },
+          { name: 'content', type: 'string', required: true, desc: '评论内容' },
+          { name: 'parent_id', type: 'number', required: false, desc: '父评论 ID（回复时填写）' },
+        ],
+        bodyExample: '{\n  "bangumi_id": 10,\n  "content": "这番剧太好看了！"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "评论成功",\n  "data": { "id": 100 }\n}',
+      },
+      {
+        id: 'comment-delete',
+        method: 'DELETE',
+        path: '/user/comments/:id',
+        name: '删除评论',
+        desc: '删除自己发表的评论。',
+        auth: 'required',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '评论 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "删除成功"\n}',
+      },
+      {
+        id: 'comment-like',
+        method: 'POST',
+        path: '/user/comments/:id/like',
+        name: '点赞评论',
+        auth: 'required',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '评论 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "点赞成功"\n}',
+      },
+      {
+        id: 'comment-unlike',
+        method: 'DELETE',
+        path: '/user/comments/:id/like',
+        name: '取消点赞',
+        auth: 'required',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '评论 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "已取消点赞"\n}',
+      },
+    ]
+  },
+  {
+    id: 'rating',
+    name: '⭐ 评分',
+    apis: [
+      {
+        id: 'rating-submit',
+        method: 'POST',
+        path: '/user/rating',
+        name: '提交/更新评分',
+        auth: 'required',
+        bodyParams: [
+          { name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'score', type: 'number', required: true, desc: '评分（1-10）' },
+        ],
+        bodyExample: '{\n  "bangumi_id": 10,\n  "score": 9\n}',
+        respExample: '{\n  "code": 200,\n  "message": "评分成功"\n}',
+      },
+      {
+        id: 'rating-get',
+        method: 'GET',
+        path: '/user/rating/:bangumiId',
+        name: '我对某番剧的评分',
+        auth: 'required',
+        pathParams: [{ name: 'bangumiId', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": { "score": 9 }\n}',
+      },
+    ]
+  },
+  {
+    id: 'danmaku',
+    name: '🎯 弹幕',
+    apis: [
+      {
+        id: 'danmaku-get',
+        method: 'GET',
+        path: '/bangumi/:bangumiId/episode/:episodeId/danmaku',
+        name: '获取弹幕列表',
+        auth: 'none',
+        pathParams: [
+          { name: 'bangumiId', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episodeId', type: 'number', required: true, desc: '剧集 ID' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "time": 12.5, "text": "好帅！", "color": "#ffffff", "type": 0 }\n  ]\n}',
+      },
+      {
+        id: 'danmaku-send',
+        method: 'POST',
+        path: '/user/danmaku',
+        name: '发送弹幕',
+        auth: 'required',
+        bodyParams: [
+          { name: 'bangumi_id', type: 'number', required: true, desc: '番剧 ID' },
+          { name: 'episode_id', type: 'number', required: true, desc: '剧集 ID' },
+          { name: 'time', type: 'number', required: true, desc: '弹幕时间点（秒）' },
+          { name: 'text', type: 'string', required: true, desc: '弹幕文字' },
+          { name: 'color', type: 'string', required: false, desc: '颜色，默认 #ffffff' },
+          { name: 'type', type: 'number', required: false, desc: '类型：0=滚动 1=顶部 2=底部' },
+        ],
+        bodyExample: '{\n  "bangumi_id": 10,\n  "episode_id": 1,\n  "time": 12.5,\n  "text": "好帅！",\n  "color": "#ff6b6b",\n  "type": 0\n}',
+        respExample: '{\n  "code": 200,\n  "message": "发送成功"\n}',
+      },
+    ]
+  },
+  {
+    id: 'certification',
+    name: '🏅 认证',
+    apis: [
+      {
+        id: 'cert-apply',
+        method: 'POST',
+        path: '/user/certification',
+        name: '申请认证',
+        auth: 'required',
+        bodyParams: [
+          { name: 'cert_type', type: 'string', required: true, desc: '认证类型标识' },
+          { name: 'material', type: 'string', required: false, desc: '申请材料/说明' },
+        ],
+        bodyExample: '{\n  "cert_type": "vip",\n  "material": "我是VIP用户，证明材料：..."\n}',
+        respExample: '{\n  "code": 200,\n  "message": "申请提交成功"\n}',
+      },
+      {
+        id: 'cert-my',
+        method: 'GET',
+        path: '/user/certification',
+        name: '我的认证申请',
+        auth: 'required',
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "cert_type": "vip", "status": 1 }\n  ]\n}',
+      },
+      {
+        id: 'cert-user',
+        method: 'GET',
+        path: '/user/certification/user/:userId',
+        name: '获取用户已通过认证',
+        desc: '公开接口，获取某用户所有已审核通过的认证。',
+        auth: 'none',
+        pathParams: [{ name: 'userId', type: 'number', required: true, desc: '用户 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "cert_type": "vip", "cert_name": "VIP用户" }\n  ]\n}',
+      },
+    ]
+  },
+  {
+    id: 'social',
+    name: '👥 社交',
+    apis: [
+      {
+        id: 'user-search',
+        method: 'GET',
+        path: '/user/search',
+        name: '搜索用户',
+        auth: 'optional',
+        queryParams: [
+          { name: 'keyword', type: 'string', required: true, desc: '关键词' },
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "nickname": "用户A", "avatar": "..." }],\n    "total": 5\n  }\n}',
+      },
+      {
+        id: 'user-profile',
+        method: 'GET',
+        path: '/user/profile/:userId',
+        name: '用户主页',
+        auth: 'optional',
+        pathParams: [{ name: 'userId', type: 'number', required: true, desc: '用户 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "id": 1,\n    "nickname": "用户A",\n    "avatar": "...",\n    "bio": "...",\n    "followingCount": 10,\n    "followersCount": 20,\n    "isFollowing": false\n  }\n}',
+      },
+      {
+        id: 'user-follow',
+        method: 'POST',
+        path: '/user/follow/:userId',
+        name: '关注用户',
+        auth: 'required',
+        pathParams: [{ name: 'userId', type: 'number', required: true, desc: '目标用户 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "关注成功"\n}',
+      },
+      {
+        id: 'user-unfollow',
+        method: 'DELETE',
+        path: '/user/follow/:userId',
+        name: '取关用户',
+        auth: 'required',
+        pathParams: [{ name: 'userId', type: 'number', required: true, desc: '目标用户 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "已取关"\n}',
+      },
+      {
+        id: 'user-following',
+        method: 'GET',
+        path: '/user/following',
+        name: '我的关注',
+        auth: 'required',
+        queryParams: [{ name: 'page', type: 'number', required: false, desc: '页码' }],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 2, "nickname": "用户B" }],\n    "total": 10\n  }\n}',
+      },
+      {
+        id: 'user-followers',
+        method: 'GET',
+        path: '/user/followers',
+        name: '我的粉丝',
+        auth: 'required',
+        queryParams: [{ name: 'page', type: 'number', required: false, desc: '页码' }],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 3, "nickname": "用户C" }],\n    "total": 5\n  }\n}',
+      },
+      {
+        id: 'user-contribution',
+        method: 'GET',
+        path: '/user/contribution-stats',
+        name: '贡献统计',
+        auth: 'required',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "bangumiApply": 3,\n    "resourceSubmit": 10\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'banner',
+    name: '🖼️ 轮播图',
+    apis: [
+      {
+        id: 'banner-public',
+        method: 'GET',
+        path: '/banner',
+        name: '获取首页轮播图',
+        desc: '公开接口，返回当前启用中的轮播图列表。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "image": "http://...", "title": "新番推荐", "link": "/bangumi/1", "type": "bangumi" }\n  ]\n}',
+      },
+    ]
+  },
+  {
+    id: 'announcement',
+    name: '📢 公告',
+    apis: [
+      {
+        id: 'announcement-active',
+        method: 'GET',
+        path: '/admin/announcement/active',
+        name: '获取当前活跃公告',
+        desc: '公开接口，前台首页展示用。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "title": "系统维护通知", "content": "...", "type": "info" }\n  ]\n}',
+      },
+    ]
+  },
+  {
+    id: 'site',
+    name: '⚙️ 站点配置',
+    apis: [
+      {
+        id: 'site-public',
+        method: 'GET',
+        path: '/admin/settings/site/public',
+        name: '获取公开站点信息',
+        desc: '前台使用，返回站点名称、副标题、ICP 备案、注册开关、博主申请开关。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "site_name": "StarAnime",\n    "site_subtitle": "团星云番剧",\n    "site_icp": "京ICP备XXXXXXXX号",\n    "register_enabled": "1",\n    "blogger_apply_enabled": "1"\n  }\n}',
+      },
+      {
+        id: 'config-roles',
+        method: 'GET',
+        path: '/admin/config/roles',
+        name: '获取角色列表',
+        desc: '公开接口，返回系统角色定义（前端渲染用）。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "value": 0, "label": "普通用户", "desc": "" },\n    { "value": 1, "label": "博主", "desc": "" },\n    { "value": 2, "label": "运营", "desc": "" },\n    { "value": 3, "label": "管理员", "desc": "" }\n  ]\n}',
+      },
+      {
+        id: 'nav-public',
+        method: 'GET',
+        path: '/admin/settings/nav/public',
+        name: '前台导航配置',
+        desc: '公开接口，返回前台导航菜单配置。',
+        auth: 'none',
+        respExample: '{\n  "code": 200,\n  "data": [\n    { "id": 1, "name": "首页", "path": "/", "icon": "home", "sort": 0 }\n  ]\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-user',
+    name: '🔧 管理 - 用户',
+    apis: [
+      {
+        id: 'admin-user-stats',
+        method: 'GET',
+        path: '/admin/stats/user',
+        name: '用户统计概览',
+        auth: 'required',
+        perm: '运营',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "total": 1000,\n    "today": 20,\n    "week": 150,\n    "active": 800\n  }\n}',
+      },
+      {
+        id: 'admin-user-list',
+        method: 'GET',
+        path: '/admin/users',
+        name: '用户列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'pageSize', type: 'number', required: false, desc: '每页条数' },
+          { name: 'keyword', type: 'string', required: false, desc: '搜索关键词' },
+          { name: 'role', type: 'number', required: false, desc: '角色筛选' },
+          { name: 'status', type: 'number', required: false, desc: '状态筛选：1=正常 0=禁用' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "username": "admin", "role": 3, "status": 1 }],\n    "total": 1000\n  }\n}',
+      },
+      {
+        id: 'admin-user-detail',
+        method: 'GET',
+        path: '/admin/users/:id',
+        name: '用户详情',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": { "id": 1, "username": "admin", "email": "...", "role": 3, "status": 1 }\n}',
+      },
+      {
+        id: 'admin-user-update',
+        method: 'PUT',
+        path: '/admin/users/:id',
+        name: '修改用户信息',
+        auth: 'required',
+        perm: '管理员',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户 ID' }],
+        bodyParams: [
+          { name: 'nickname', type: 'string', required: false, desc: '昵称' },
+          { name: 'role', type: 'number', required: false, desc: '角色' },
+        ],
+        bodyExample: '{\n  "nickname": "新昵称",\n  "role": 1\n}',
+        respExample: '{\n  "code": 200,\n  "message": "修改成功"\n}',
+      },
+      {
+        id: 'admin-user-password',
+        method: 'PUT',
+        path: '/admin/users/:id/password',
+        name: '重置用户密码',
+        auth: 'required',
+        perm: '管理员',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户 ID' }],
+        bodyParams: [{ name: 'newPassword', type: 'string', required: true, desc: '新密码' }],
+        bodyExample: '{\n  "newPassword": "newpassword123"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "密码已重置"\n}',
+      },
+      {
+        id: 'admin-user-status',
+        method: 'PUT',
+        path: '/admin/users/:id/status',
+        name: '切换用户状态',
+        desc: '启用/禁用用户账号。',
+        auth: 'required',
+        perm: '管理员',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '用户 ID' }],
+        bodyParams: [{ name: 'status', type: 'number', required: true, desc: '状态：1=启用 0=禁用' }],
+        bodyExample: '{\n  "status": 0\n}',
+        respExample: '{\n  "code": 200,\n  "message": "状态已更新"\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-bangumi',
+    name: '🔧 管理 - 番剧',
+    apis: [
+      {
+        id: 'admin-ban-stats',
+        method: 'GET',
+        path: '/admin/stats/bangumi',
+        name: '番剧统计概览',
+        auth: 'required',
+        perm: '运营',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "total": 200,\n    "online": 150,\n    "pending": 20\n  }\n}',
+      },
+      {
+        id: 'admin-ban-list',
+        method: 'GET',
+        path: '/admin/bangumi',
+        name: '番剧列表（管理）',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'keyword', type: 'string', required: false, desc: '关键词' },
+          { name: 'status', type: 'number', required: false, desc: '状态' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "title": "某番剧", "status": 1 }],\n    "total": 200\n  }\n}',
+      },
+      {
+        id: 'admin-ban-create',
+        method: 'POST',
+        path: '/admin/bangumi',
+        name: '新建番剧',
+        auth: 'required',
+        perm: '运营',
+        bodyParams: [
+          { name: 'title', type: 'string', required: true, desc: '标题' },
+          { name: 'description', type: 'string', required: false, desc: '描述' },
+          { name: 'cover', type: 'string', required: false, desc: '封面 URL' },
+          { name: 'genre', type: 'string', required: false, desc: '类型' },
+          { name: 'region', type: 'string', required: false, desc: '地区' },
+          { name: 'year', type: 'number', required: false, desc: '年份' },
+          { name: 'total_episodes', type: 'number', required: false, desc: '总集数' },
+          { name: 'status', type: 'number', required: false, desc: '状态：0=连载 1=完结' },
+        ],
+        bodyExample: '{\n  "title": "新番剧",\n  "description": "精彩番剧",\n  "cover": "http://...",\n  "genre": "热血",\n  "region": "日本",\n  "year": 2024\n}',
+        respExample: '{\n  "code": 200,\n  "data": { "id": 10 }\n}',
+      },
+      {
+        id: 'admin-ban-update',
+        method: 'PUT',
+        path: '/admin/bangumi/:id',
+        name: '更新番剧',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        bodyExample: '{\n  "title": "修改后的标题"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "更新成功"\n}',
+      },
+      {
+        id: 'admin-ban-delete',
+        method: 'DELETE',
+        path: '/admin/bangumi/:id',
+        name: '删除番剧',
+        auth: 'required',
+        perm: '管理员',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '番剧 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "删除成功"\n}',
+      },
+      {
+        id: 'admin-ban-apply-list',
+        method: 'GET',
+        path: '/admin/bangumi-apply',
+        name: '番剧申请列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'status', type: 'number', required: false, desc: '状态：0=待审 1=通过 2=拒绝' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "title": "某番剧", "status": 0 }],\n    "total": 10\n  }\n}',
+      },
+      {
+        id: 'admin-ban-apply-review',
+        method: 'PUT',
+        path: '/admin/bangumi-apply/:id/review',
+        name: '审核番剧申请',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '申请 ID' }],
+        bodyParams: [
+          { name: 'status', type: 'number', required: true, desc: '1=通过 2=拒绝' },
+          { name: 'remark', type: 'string', required: false, desc: '审核备注' },
+        ],
+        bodyExample: '{\n  "status": 1,\n  "remark": "内容符合要求"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "审核成功"\n}',
+      },
+      {
+        id: 'admin-resource-list',
+        method: 'GET',
+        path: '/admin/resource',
+        name: '资源审核列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'status', type: 'number', required: false, desc: '状态' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "status": 0 }],\n    "total": 5\n  }\n}',
+      },
+      {
+        id: 'admin-resource-review',
+        method: 'PUT',
+        path: '/admin/resource/:id/review',
+        name: '审核资源',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '资源 ID' }],
+        bodyParams: [
+          { name: 'status', type: 'number', required: true, desc: '1=通过 2=拒绝' },
+          { name: 'remark', type: 'string', required: false, desc: '备注' },
+        ],
+        bodyExample: '{\n  "status": 1\n}',
+        respExample: '{\n  "code": 200,\n  "message": "审核成功"\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-blogger',
+    name: '🔧 管理 - 博主申请',
+    apis: [
+      {
+        id: 'admin-blogger-list',
+        method: 'GET',
+        path: '/admin/blogger-apply',
+        name: '博主申请列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'status', type: 'number', required: false, desc: '状态：0=待审 1=通过 2=拒绝' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "user_id": 5, "reason": "我热爱动漫", "status": 0 }],\n    "total": 20\n  }\n}',
+      },
+      {
+        id: 'admin-blogger-count',
+        method: 'GET',
+        path: '/admin/blogger-apply/pending-count',
+        name: '待审核博主申请数',
+        auth: 'required',
+        perm: '运营',
+        respExample: '{\n  "code": 200,\n  "data": { "count": 5 }\n}',
+      },
+      {
+        id: 'admin-blogger-detail',
+        method: 'GET',
+        path: '/admin/blogger-apply/:id',
+        name: '博主申请详情',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '申请 ID' }],
+        respExample: '{\n  "code": 200,\n  "data": { "id": 1, "user_id": 5, "reason": "...", "status": 0 }\n}',
+      },
+      {
+        id: 'admin-blogger-review',
+        method: 'PUT',
+        path: '/admin/blogger-apply/:id/review',
+        name: '审核博主申请',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '申请 ID' }],
+        bodyParams: [
+          { name: 'status', type: 'number', required: true, desc: '1=通过 2=拒绝' },
+          { name: 'review_remark', type: 'string', required: false, desc: '审核说明' },
+        ],
+        bodyExample: '{\n  "status": 1,\n  "review_remark": "资质审核通过"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "审核完成"\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-content',
+    name: '🔧 管理 - 内容',
+    apis: [
+      {
+        id: 'admin-danmaku-list',
+        method: 'GET',
+        path: '/admin/danmaku',
+        name: '弹幕列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'keyword', type: 'string', required: false, desc: '关键词' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "text": "好帅！", "user_id": 5 }],\n    "total": 200\n  }\n}',
+      },
+      {
+        id: 'admin-danmaku-delete',
+        method: 'DELETE',
+        path: '/admin/danmaku/:id',
+        name: '删除单条弹幕',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '弹幕 ID' }],
+        respExample: '{\n  "code": 200,\n  "message": "删除成功"\n}',
+      },
+      {
+        id: 'admin-comment-list',
+        method: 'GET',
+        path: '/admin/comments',
+        name: '评论列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'keyword', type: 'string', required: false, desc: '关键词' },
+          { name: 'status', type: 'number', required: false, desc: '状态' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "content": "很好看！", "status": 1 }],\n    "total": 500\n  }\n}',
+      },
+      {
+        id: 'admin-comment-status',
+        method: 'PUT',
+        path: '/admin/comments/:id/status',
+        name: '切换评论状态',
+        auth: 'required',
+        perm: '运营',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '评论 ID' }],
+        bodyParams: [{ name: 'status', type: 'number', required: true, desc: '1=显示 0=隐藏' }],
+        bodyExample: '{\n  "status": 0\n}',
+        respExample: '{\n  "code": 200,\n  "message": "操作成功"\n}',
+      },
+      {
+        id: 'admin-rating-list',
+        method: 'GET',
+        path: '/admin/ratings',
+        name: '评分列表',
+        auth: 'required',
+        perm: '运营',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "score": 9, "user_id": 5 }],\n    "total": 300\n  }\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-ban-apply',
+    name: '🔧 管理 - 封号申请',
+    apis: [
+      {
+        id: 'ban-apply-create',
+        method: 'POST',
+        path: '/admin/ban-apply',
+        name: '提交封号申请',
+        auth: 'required',
+        perm: '运营',
+        bodyParams: [
+          { name: 'target_user_id', type: 'number', required: true, desc: '被封号用户 ID' },
+          { name: 'reason', type: 'string', required: true, desc: '封号原因' },
+        ],
+        bodyExample: '{\n  "target_user_id": 100,\n  "reason": "违规发布内容"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "申请已提交"\n}',
+      },
+      {
+        id: 'ban-apply-list',
+        method: 'GET',
+        path: '/admin/ban-apply',
+        name: '封号申请列表',
+        auth: 'required',
+        perm: '运营',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'status', type: 'number', required: false, desc: '状态' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "target_user_id": 100, "status": 0 }],\n    "total": 5\n  }\n}',
+      },
+      {
+        id: 'ban-apply-review',
+        method: 'PUT',
+        path: '/admin/ban-apply/:id/review',
+        name: '审批封号申请',
+        auth: 'required',
+        perm: '管理员',
+        pathParams: [{ name: 'id', type: 'number', required: true, desc: '申请 ID' }],
+        bodyParams: [
+          { name: 'status', type: 'number', required: true, desc: '1=批准 2=拒绝' },
+          { name: 'remark', type: 'string', required: false, desc: '说明' },
+        ],
+        bodyExample: '{\n  "status": 1,\n  "remark": "违规行为属实"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "审批完成"\n}',
+      },
+    ]
+  },
+  {
+    id: 'admin-settings',
+    name: '🔧 管理 - 系统设置',
+    apis: [
+      {
+        id: 'admin-site-settings-get',
+        method: 'GET',
+        path: '/admin/settings/site',
+        name: '获取站点设置',
+        auth: 'required',
+        perm: '管理员',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "site_name": "StarAnime",\n    "site_subtitle": "团星云番剧",\n    "site_icp": "",\n    "register_enabled": "1",\n    "blogger_apply_enabled": "1"\n  }\n}',
+      },
+      {
+        id: 'admin-site-settings-put',
+        method: 'PUT',
+        path: '/admin/settings/site',
+        name: '保存站点设置',
+        auth: 'required',
+        perm: '管理员',
+        bodyParams: [
+          { name: 'site_name', type: 'string', required: false, desc: '站点名称' },
+          { name: 'site_subtitle', type: 'string', required: false, desc: '站点副标题' },
+          { name: 'site_icp', type: 'string', required: false, desc: 'ICP 备案号' },
+          { name: 'register_enabled', type: 'string', required: false, desc: '开放注册：1=开启 0=关闭' },
+          { name: 'blogger_apply_enabled', type: 'string', required: false, desc: '开放博主申请：1=开启 0=关闭' },
+        ],
+        bodyExample: '{\n  "site_name": "StarAnime",\n  "register_enabled": "0",\n  "blogger_apply_enabled": "1"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "保存成功"\n}',
+      },
+      {
+        id: 'admin-log-settings-get',
+        method: 'GET',
+        path: '/admin/settings/log',
+        name: '获取日志设置',
+        auth: 'required',
+        perm: '管理员',
+        respExample: '{\n  "code": 200,\n  "data": {\n    "log_enabled": "1",\n    "log_retention_days": "30"\n  }\n}',
+      },
+      {
+        id: 'admin-log-settings-put',
+        method: 'PUT',
+        path: '/admin/settings/log',
+        name: '保存日志设置',
+        auth: 'required',
+        perm: '管理员',
+        bodyExample: '{\n  "log_enabled": "1",\n  "log_retention_days": "30"\n}',
+        respExample: '{\n  "code": 200,\n  "message": "保存成功"\n}',
+      },
+      {
+        id: 'admin-logs-list',
+        method: 'GET',
+        path: '/admin/logs',
+        name: '操作日志列表',
+        auth: 'required',
+        perm: '管理员',
+        queryParams: [
+          { name: 'page', type: 'number', required: false, desc: '页码' },
+          { name: 'user_id', type: 'number', required: false, desc: '用户 ID 筛选' },
+          { name: 'action', type: 'string', required: false, desc: '操作类型' },
+        ],
+        respExample: '{\n  "code": 200,\n  "data": {\n    "list": [{ "id": 1, "action": "user.login", "user_id": 1, "created_at": "..." }],\n    "total": 1000\n  }\n}',
+      },
+    ]
+  },
+]
+
+// =====================================================
+// 配置与状态
+// =====================================================
+let API_BASE = localStorage.getItem('apidoc_base') || 'http://localhost:8080/api'
+let currentToken = localStorage.getItem('apidoc_token') || ''
+let currentUser = JSON.parse(localStorage.getItem('apidoc_user') || 'null')
+let currentApiId = null
+let allApis = []
+
+// 展平所有 API
+API_GROUPS.forEach(g => g.apis.forEach(a => { a.groupName = g.name; allApis.push(a) }))
+
+// =====================================================
+// 配置弹窗
+// =====================================================
+function openConfigModal() {
+  document.getElementById('cfg-base-url').value = API_BASE
+  document.getElementById('cfg-username').value = ''
+  document.getElementById('cfg-password').value = ''
+  document.getElementById('cfg-err').textContent = ''
+  document.getElementById('cfg-save-btn').textContent = '保存并连接'
+  document.getElementById('config-modal').classList.add('open')
+}
+
+function closeConfigModal() {
+  document.getElementById('config-modal').classList.remove('open')
+}
+
+// 点击遮罩关闭
+document.getElementById('config-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfigModal()
+})
+
+async function saveConfig() {
+  const baseUrl = document.getElementById('cfg-base-url').value.trim()
+  const username = document.getElementById('cfg-username').value.trim()
+  const password = document.getElementById('cfg-password').value.trim()
+  const errEl = document.getElementById('cfg-err')
+  const btn = document.getElementById('cfg-save-btn')
+
+  if (!baseUrl) { errEl.textContent = '请填写服务地址'; return }
+
+  // 保存服务地址
+  API_BASE = baseUrl.replace(/\/$/, '')
+  localStorage.setItem('apidoc_base', API_BASE)
+  updateServerStatus()
+
+  // 没填账号密码 → 仅保存地址，不登录
+  if (!username && !password) {
+    closeConfigModal()
+    renderNav()
+    return
+  }
+  if (!password) { errEl.textContent = '填写了用户名，请同时填写密码'; return }
+
+  // 尝试登录
+  btn.disabled = true; btn.textContent = '登录中...'
+  errEl.textContent = ''
+  try {
+    const resp = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+    const data = await resp.json()
+    if (data.code === 200) {
+      currentToken = data.data.token
+      currentUser = data.data.user
+      localStorage.setItem('apidoc_token', currentToken)
+      localStorage.setItem('apidoc_user', JSON.stringify(currentUser))
+      updateUserInfo()
+      closeConfigModal()
+      renderNav()
+    } else {
+      errEl.textContent = data.message || '登录失败，请检查账号密码'
+    }
+  } catch (e) {
+    errEl.textContent = '无法连接到服务器，请检查服务地址是否正确'
+  }
+  btn.disabled = false; btn.textContent = '保存并连接'
+}
+
+// 回车触发保存
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('config-modal').classList.contains('open')) {
+    saveConfig()
+  }
+})
+
+function doLogout() {
+  localStorage.removeItem('apidoc_token')
+  localStorage.removeItem('apidoc_user')
+  currentToken = ''; currentUser = null
+  updateUserInfo()
+  renderNav()
+}
+
+// =====================================================
+// 更新界面状态
+// =====================================================
+function updateServerStatus() {
+  const dot = document.getElementById('server-dot')
+  const urlEl = document.getElementById('server-url-display')
+  const btnConfig = document.getElementById('btn-config')
+  urlEl.textContent = API_BASE
+  dot.className = 'server-dot online'
+  btnConfig.classList.add('active')
+}
+
+function updateUserInfo() {
+  const badge = document.getElementById('user-badge')
+  const btnLogout = document.getElementById('btn-logout')
+  if (currentUser) {
+    const roleMap = { 0: '普通用户', 1: '博主', 2: '运营', 3: '管理员' }
+    document.getElementById('user-display-name').textContent = currentUser.nickname || currentUser.username
+    document.getElementById('user-display-role').textContent = roleMap[currentUser.role] || '未知'
+    const initial = (currentUser.nickname || currentUser.username || 'U')[0].toUpperCase()
+    document.getElementById('user-avatar-text').textContent = initial
+    badge.style.display = 'flex'
+    btnLogout.style.display = 'block'
+  } else {
+    badge.style.display = 'none'
+    btnLogout.style.display = 'none'
+  }
+}
+
+// =====================================================
+// 导航渲染
+// =====================================================
+function renderNav(filter = '') {
+  const container = document.getElementById('nav-container')
+  let html = ''
+  const kw = filter.toLowerCase()
+  API_GROUPS.forEach(group => {
+    const apis = group.apis.filter(a =>
+      !kw || a.name.toLowerCase().includes(kw) || a.path.toLowerCase().includes(kw)
+    )
+    if (!apis.length) return
+    html += `<div class="nav-group">`
+    html += `<div class="nav-group-title">${group.name}</div>`
+    apis.forEach(api => {
+      const active = api.id === currentApiId ? 'active' : ''
+      html += `<div class="nav-item ${active}" onclick="showApi('${api.id}')">
+        <span class="method-badge m-${api.method}">${api.method}</span>
+        <span class="name">${api.name}</span>
+      </div>`
+    })
+    html += `</div>`
+  })
+  container.innerHTML = html
+}
+
+function filterNav(val) { renderNav(val) }
+
+// =====================================================
+// 显示 API 详情
+// =====================================================
+function showApi(id) {
+  const api = allApis.find(a => a.id === id)
+  if (!api) return
+  currentApiId = id
+  renderNav(document.getElementById('search-input').value)
+
+  const authLabel = { required: '需要认证', optional: '可选认证', none: '无需认证' }
+  const authClass = { required: 'required', optional: 'optional', none: 'none' }
+  const authIcon  = { required: '🔒', optional: '🔑', none: '🌐' }
+
+  let html = `<div class="api-detail">`
+  html += `<div class="api-title">
+    <span class="method-big m-${api.method}">${api.method}</span>
+    <h1>${api.name}</h1>
+    ${api.perm ? `<span class="perm-badge">${api.perm}</span>` : ''}
+  </div>`
+  if (api.desc) html += `<div class="api-desc">${api.desc}</div>`
+
+  html += `<div class="method-path">
+    <span class="method-big m-${api.method}">${api.method}</span>
+    <span class="path-text">${api.path}</span>
+    <span class="auth-badge ${authClass[api.auth]}">${authIcon[api.auth]} ${authLabel[api.auth]}</span>
+  </div>`
+
+  if (api.pathParams && api.pathParams.length) html += renderParamTable('路径参数 PATH', api.pathParams)
+  if (api.queryParams && api.queryParams.length) html += renderParamTable('查询参数 QUERY', api.queryParams)
+  if (api.bodyParams && api.bodyParams.length) html += renderParamTable('请求体 BODY (application/json)', api.bodyParams)
+
+  if (api.bodyExample) {
+    html += `<div class="section">
+      <div class="section-title">请求示例</div>
+      ${renderCodeBlock(api.bodyExample, 'json')}
+    </div>`
+  }
+  if (api.respExample) {
+    html += `<div class="section">
+      <div class="section-title">响应示例</div>
+      ${renderCodeBlock(api.respExample, 'json')}
+    </div>`
+  }
+
+  html += renderDebugPanel(api)
+  html += `</div>`
+  document.getElementById('main-content').innerHTML = html
+  document.getElementById('main-content').scrollTop = 0
+
+  if (api.bodyExample && !api.bodyExample.includes('multipart')) {
+    const ta = document.getElementById('debug-body')
+    if (ta) ta.value = api.bodyExample
+  }
+}
+
+function renderParamTable(title, params) {
+  let html = `<div class="section">
+    <div class="section-title">${title}</div>
+    <table class="param-table">
+      <thead><tr>
+        <th style="width:140px">参数名</th>
+        <th style="width:80px">类型</th>
+        <th style="width:60px">必填</th>
+        <th>说明</th>
+      </tr></thead><tbody>`
+  params.forEach(p => {
+    html += `<tr>
+      <td><span class="param-name">${p.name}</span></td>
+      <td><span class="param-type">${p.type}</span></td>
+      <td>${p.required ? '<span class="param-required">✓ 必填</span>' : '<span class="param-optional">选填</span>'}</td>
+      <td><span class="param-desc">${p.desc || ''}</span></td>
+    </tr>`
+  })
+  html += `</tbody></table></div>`
+  return html
+}
+
+function renderCodeBlock(code, lang = 'json') {
+  const id = 'cb-' + Math.random().toString(36).slice(2)
+  return `<div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">${lang}</span>
+      <button class="btn-copy" onclick="copyCode('${id}')">复制</button>
+    </div>
+    <pre id="${id}">${escHtml(code)}</pre>
+  </div>`
+}
+
+function renderDebugPanel(api) {
+  const needsBody = ['POST', 'PUT', 'PATCH'].includes(api.method)
+  const hasPath = api.pathParams && api.pathParams.length
+  const hasQuery = api.queryParams && api.queryParams.length
+
+  const tokenTip = currentToken
+    ? `<span>已携带 Token：</span><span class="token-val">${currentToken.slice(0,40)}...</span>
+       <button class="btn-clear-token" onclick="clearDebugToken()">清除</button>`
+    : `<span style="color:var(--text-dim)">未登录，公开接口可直接调试；需要认证的接口请先在底部配置处登录</span>`
+
+  let html = `<div class="debug-panel">
+    <div class="debug-header">
+      <h3>⚡ 在线调试</h3>
+      <span class="tip">目标：${API_BASE}</span>
+      <button class="btn-run" id="btn-run" onclick="runApi('${api.id}')">▶ 发送请求</button>
+    </div>
+    <div class="debug-body">
+      <div class="token-status">
+        <div class="token-dot ${currentToken ? '' : 'off'}"></div>
+        ${tokenTip}
+      </div>`
+
+  if (hasPath) {
+    html += `<div class="debug-row"><label>路径参数</label><div class="debug-params-grid">`
+    api.pathParams.forEach(p => {
+      html += `<div class="debug-param-item">
+        <label><span class="param-name">${p.name}</span> <span class="param-type">${p.type}</span>
+          ${p.required ? '<span class="param-required">*</span>' : ''}</label>
+        <input class="debug-input" id="pparam-${p.name}" placeholder="${p.desc || ''}" />
+      </div>`
+    })
+    html += `</div></div>`
+  }
+
+  if (hasQuery) {
+    html += `<div class="debug-row"><label>查询参数 (Query)</label><div class="debug-params-grid">`
+    api.queryParams.forEach(p => {
+      html += `<div class="debug-param-item">
+        <label><span class="param-name">${p.name}</span> <span class="param-type">${p.type}</span>
+          ${p.required ? '<span class="param-required">*</span>' : ''}</label>
+        <input class="debug-input" id="qparam-${p.name}" placeholder="${p.desc || ''}" />
+      </div>`
+    })
+    html += `</div></div>`
+  }
+
+  if (needsBody) {
+    html += `<div class="debug-row">
+      <label>请求体 (JSON)</label>
+      <textarea class="debug-input" id="debug-body" placeholder='{ "key": "value" }'>${api.bodyExample && !api.bodyExample.includes('multipart') ? api.bodyExample : ''}</textarea>
+    </div>`
+  }
+
+  html += `<div class="debug-row">
+    <label>自定义 Token（可选，留空使用已登录 Token）</label>
+    <input class="debug-input" id="custom-token" placeholder="Bearer xxxxx 或直接填 token 字符串" />
+  </div>`
+
+  html += `</div><div id="debug-response"></div></div>`
+  return html
+}
+
+// =====================================================
+// 执行请求
+// =====================================================
+async function runApi(id) {
+  const api = allApis.find(a => a.id === id)
+  if (!api) return
+
+  const btn = document.getElementById('btn-run')
+  btn.disabled = true; btn.textContent = '请求中...'
+
+  let url = API_BASE + api.path
+  if (api.pathParams) {
+    api.pathParams.forEach(p => {
+      const val = document.getElementById(`pparam-${p.name}`)?.value?.trim()
+      if (val) url = url.replace(`:${p.name}`, encodeURIComponent(val))
+    })
+  }
+  const qp = new URLSearchParams()
+  if (api.queryParams) {
+    api.queryParams.forEach(p => {
+      const val = document.getElementById(`qparam-${p.name}`)?.value?.trim()
+      if (val) qp.set(p.name, val)
+    })
+  }
+  if ([...qp].length) url += '?' + qp.toString()
+
+  const customToken = document.getElementById('custom-token')?.value?.trim()
+  let token = customToken || currentToken
+  if (token && !token.startsWith('Bearer ')) token = 'Bearer ' + token
+
+  const headers = {}
+  if (token) headers['Authorization'] = token
+  const needsBody = ['POST', 'PUT', 'PATCH'].includes(api.method)
+  let body = null
+  if (needsBody) {
+    const bodyVal = document.getElementById('debug-body')?.value?.trim()
+    if (bodyVal) { headers['Content-Type'] = 'application/json'; body = bodyVal }
+  }
+
+  const startTime = Date.now()
+  const respEl = document.getElementById('debug-response')
+  respEl.innerHTML = `<div style="padding:16px;color:var(--text-muted);font-size:13px">⏳ 请求中...</div>`
+
+  try {
+    const resp = await fetch(url, { method: api.method, headers, body })
+    const elapsed = Date.now() - startTime
+    const text = await resp.text()
+    let parsed, isJson = false
+    try { parsed = JSON.parse(text); isJson = true } catch {}
+    const size = new Blob([text]).size
+
+    const statusClass = resp.ok ? 'ok' : 'err'
+    let respHtml = `<div class="debug-response">
+      <div class="response-meta">
+        <span class="res-status ${statusClass}">${resp.status} ${resp.statusText}</span>
+        <span class="res-time">⏱ ${elapsed}ms</span>
+        <span class="res-size">📦 ${formatSize(size)}</span>
+      </div>`
+
+    if (isJson) {
+      const pretty = JSON.stringify(parsed, null, 2)
+      respHtml += `<div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">json (response)</span>
+          <button class="btn-copy" onclick="copyText(${JSON.stringify(pretty).replace(/'/g,"&#39;")})">复制</button>
+        </div>
+        <pre>${syntaxHighlight(pretty)}</pre>
+      </div>`
+    } else {
+      respHtml += `<div class="code-block"><div class="code-header"><span class="code-lang">text</span></div><pre>${escHtml(text.slice(0,2000))}</pre></div>`
+    }
+    respHtml += `</div>`
+    respEl.innerHTML = respHtml
+  } catch (e) {
+    respEl.innerHTML = `<div class="debug-response"><div class="response-meta"><span class="res-status err">请求失败</span></div><div style="color:var(--red);font-size:13px;padding:8px 0">${e.message}</div></div>`
+  }
+  btn.disabled = false; btn.textContent = '▶ 发送请求'
+}
+
+function clearDebugToken() {
+  currentToken = ''
+  localStorage.removeItem('apidoc_token')
+  showApi(currentApiId)
+}
+
+// =====================================================
+// 工具函数
+// =====================================================
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+function syntaxHighlight(json) {
+  return escHtml(json).replace(
+    /("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    m => {
+      let cls = 'json-number'
+      if (/^"/.test(m)) { cls = /:$/.test(m) ? 'json-key' : 'json-string' }
+      else if (/true|false/.test(m)) cls = 'json-boolean'
+      else if (/null/.test(m)) cls = 'json-null'
+      return `<span class="${cls}">${m}</span>`
+    }
+  )
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB'
+  return (bytes/1024/1024).toFixed(2) + ' MB'
+}
+
+function copyCode(id) {
+  const el = document.getElementById(id)
+  if (!el) return
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const btn = el.parentElement.querySelector('.btn-copy')
+    if (btn) { btn.textContent = '✓ 已复制'; setTimeout(() => btn.textContent = '复制', 1500) }
+  })
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).catch(() => {})
+}
+
+// =====================================================
+// 初始化：直接进入主界面
+// =====================================================
+document.getElementById('app').style.display = 'flex'
+updateUserInfo()
+updateServerStatus()
+renderNav()
+
+// 如果没有保存过服务地址，提示配置
+if (!localStorage.getItem('apidoc_base')) {
+  setTimeout(openConfigModal, 500)
+}
+</script>
+</body>
+</html>

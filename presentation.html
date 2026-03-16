@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarAnime · 团星云番剧平台 · 项目介绍</title>
+  <style>
+    /* ===== 全局重置 ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1890ff;
+      --primary-dark: #0d6fcb;
+      --accent: #faad14;
+      --success: #52c41a;
+      --danger: #ff4d4f;
+      --bg: #0a0e1a;
+      --bg2: #0f1525;
+      --bg3: #151c30;
+      --card: #1a2236;
+      --card2: #1f2940;
+      --border: rgba(255,255,255,0.08);
+      --text: #e8eaf0;
+      --text2: #8b9abf;
+      --text3: #5a6a8a;
+      --glow: rgba(24,144,255,0.15);
+      --font: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+      --code-font: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+      height: 100vh;
+      user-select: none;
+    }
+
+    /* ===== 幻灯片容器 ===== */
+    .slides-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 60px;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      overflow-y: auto;
+    }
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: all;
+    }
+    .slide.prev {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    /* ===== 进度条 ===== */
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.4s ease;
+      z-index: 100;
+      box-shadow: 0 0 8px var(--primary);
+    }
+
+    /* ===== 导航按钮 ===== */
+    .nav-btn {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px; height: 44px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text2);
+      font-size: 18px;
+      transition: all 0.2s;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .nav-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 0 16px rgba(24,144,255,0.5); }
+    .nav-btn.prev-btn { left: 20px; }
+    .nav-btn.next-btn { right: 20px; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .nav-btn:disabled:hover { background: var(--card2); color: var(--text2); border-color: var(--border); box-shadow: none; }
+
+    /* ===== 幻灯片指示点 ===== */
+    .slide-dots {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 4px;
+      background: var(--text3);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .dot.active {
+      width: 24px;
+      background: var(--primary);
+      box-shadow: 0 0 8px rgba(24,144,255,0.5);
+    }
+
+    /* ===== 幻灯片编号 ===== */
+    .slide-counter {
+      position: fixed;
+      bottom: 24px;
+      right: 28px;
+      color: var(--text3);
+      font-size: 13px;
+      z-index: 100;
+    }
+
+    /* ===== 通用样式 ===== */
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .tag-blue { background: rgba(24,144,255,0.15); color: var(--primary); border: 1px solid rgba(24,144,255,0.3); }
+    .tag-gold { background: rgba(250,173,20,0.15); color: var(--accent); border: 1px solid rgba(250,173,20,0.3); }
+    .tag-green { background: rgba(82,196,26,0.15); color: var(--success); border: 1px solid rgba(82,196,26,0.3); }
+    .tag-red { background: rgba(255,77,79,0.15); color: var(--danger); border: 1px solid rgba(255,77,79,0.3); }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      transition: all 0.2s;
+    }
+    .card:hover { border-color: rgba(24,144,255,0.3); box-shadow: 0 0 20px var(--glow); }
+
+    .divider {
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      border-radius: 2px;
+      margin: 16px 0;
+    }
+
+    /* ===== 代码块 ===== */
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--code-font);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #161b22;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .code-filename { color: var(--text2); font-size: 12px; margin-left: 4px; }
+    .code-body { padding: 16px 20px; overflow-x: auto; }
+    pre { white-space: pre; }
+    .kw { color: #ff7b72; }
+    .fn { color: #d2a8ff; }
+    .str { color: #a5d6ff; }
+    .num { color: #79c0ff; }
+    .cmt { color: #8b949e; font-style: italic; }
+    .var { color: #ffa657; }
+    .prop { color: #79c0ff; }
+    .op { color: #ff7b72; }
+    .punc { color: #e6edf3; }
+
+    /* ===== 幻灯片1：封面 ===== */
+    #slide-0 {
+      background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(24,144,255,0.08) 0%, transparent 70%),
+                  var(--bg);
+    }
+    .cover-star {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(24,144,255,0.6);
+      animation: twinkle var(--d, 3s) ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.4); }
+    }
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .logo-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--primary), #0d6fcb);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 8px 32px rgba(24,144,255,0.4);
+    }
+    .cover-title {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .cover-subtitle {
+      font-size: 20px;
+      color: var(--text2);
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+    .cover-desc {
+      font-size: 15px;
+      color: var(--text3);
+      max-width: 580px;
+      text-align: center;
+      line-height: 1.8;
+      margin-bottom: 32px;
+    }
+    .cover-tags { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    /* ===== 幻灯片2：项目概览 ===== */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .overview-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .overview-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--accent-color, var(--primary));
+    }
+    .overview-icon { font-size: 28px; margin-bottom: 12px; }
+    .overview-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .overview-card p { font-size: 13px; color: var(--text2); line-height: 1.7; }
+
+    /* ===== 幻灯片3：技术栈 ===== */
+    .tech-layout { display: flex; gap: 32px; width: 100%; max-width: 960px; }
+    .tech-col { flex: 1; }
+    .tech-col h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tech-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .tech-item:last-child { border-bottom: none; }
+    .tech-badge {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .tech-info strong { display: block; font-size: 14px; color: var(--text); }
+    .tech-info span { font-size: 12px; color: var(--text3); }
+    .tech-bar-wrap { flex: 1; }
+    .tech-bar-bg { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+    .tech-bar { height: 100%; border-radius: 2px; background: var(--primary); transition: width 0.6s ease 0.2s; }
+
+    /* ===== 幻灯片4：核心功能 ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 960px;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(24,144,255,0.4);
+      box-shadow: 0 12px 40px rgba(24,144,255,0.15);
+    }
+    .feature-card .feature-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    .feature-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 12px; color: var(--text2); line-height: 1.7; }
+    .feature-card .feature-tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px; }
+
+    /* ===== 幻灯片5：架构设计 ===== */
+    .arch-wrap { width: 100%; max-width: 900px; }
+    .arch-layers { display: flex; flex-direction: column; gap: 12px; }
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .arch-label {
+      width: 80px;
+      font-size: 12px;
+      color: var(--text3);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .arch-items { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; }
+    .arch-item {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+    .arch-arrow {
+      display: flex;
+      justify-content: center;
+      margin: 2px 0;
+      font-size: 18px;
+      color: var(--text3);
+    }
+
+    /* ===== 幻灯片6：代码：JWT认证 ===== */
+    /* ===== 幻灯片7：代码：Redis缓存 ===== */
+    /* ===== 幻灯片8：代码：弹幕 ===== */
+    /* ===== 幻灯片9：代码：HLS ===== */
+
+    .code-slide-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+      max-width: 1060px;
+      align-items: start;
+    }
+    .code-explain h3 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .code-explain p { font-size: 13px; color: var(--text2); line-height: 1.8; margin-bottom: 16px; }
+    .explain-points { list-style: none; }
+    .explain-points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 10px;
+      line-height: 1.7;
+    }
+    .explain-points li .bullet {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 幻灯片：数据库设计 ===== */
+    .db-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 960px;
+    }
+    .db-table {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .db-table-header {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+    }
+    .db-table-body { padding: 10px 14px; }
+    .db-field {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .db-field:last-child { border-bottom: none; }
+    .db-field-name { color: var(--text2); }
+    .db-field-type { color: var(--text3); font-family: var(--code-font); }
+    .pk-badge { color: var(--accent); font-size: 10px; font-weight: 700; }
+
+    /* ===== 幻灯片：项目总结 ===== */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 20px;
+      text-align: center;
+    }
+    .stat-card .stat-num {
+      font-size: 40px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 6px;
+    }
+    .roadmap { width: 100%; max-width: 700px; margin-top: 24px; }
+    .roadmap-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .roadmap-item:last-child { border-bottom: none; }
+    .roadmap-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .roadmap-item h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .roadmap-item p { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+    /* ===== 通用标题区域 ===== */
+    .slide-head {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .slide-head h1 {
+      font-size: 34px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .slide-head p {
+      font-size: 14px;
+      color: var(--text2);
+    }
+
+    /* ===== 动画 ===== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide.active .anim {
+      animation: fadeUp 0.5s ease forwards;
+    }
+    .slide.active .anim:nth-child(1) { animation-delay: 0.1s; }
+    .slide.active .anim:nth-child(2) { animation-delay: 0.2s; }
+    .slide.active .anim:nth-child(3) { animation-delay: 0.3s; }
+    .slide.active .anim:nth-child(4) { animation-delay: 0.4s; }
+    .slide.active .anim:nth-child(5) { animation-delay: 0.5s; }
+    .slide.active .anim:nth-child(6) { animation-delay: 0.6s; }
+    .anim { opacity: 0; }
+
+    /* ===== 流程图 ===== */
+    .flow-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .flow-box {
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 90px;
+    }
+    .flow-sub { font-size: 11px; color: var(--text3); }
+    .flow-arrow {
+      font-size: 20px;
+      color: var(--primary);
+      margin: 0 2px;
+    }
+
+    /* ===== 键盘提示 ===== */
+    .keyboard-hint {
+      position: fixed;
+      bottom: 24px;
+      left: 28px;
+      font-size: 12px;
+      color: var(--text3);
+      z-index: 100;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border: 1px solid var(--text3);
+      border-radius: 4px;
+      font-size: 11px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 进度条 -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- 导航按钮 -->
+<button class="nav-btn prev-btn" id="prevBtn" onclick="navigate(-1)" title="上一页">&#8249;</button>
+<button class="nav-btn next-btn" id="nextBtn" onclick="navigate(1)" title="下一页">&#8250;</button>
+
+<!-- 指示点 -->
+<div class="slide-dots" id="slideDots"></div>
+
+<!-- 幻灯片编号 -->
+<div class="slide-counter" id="slideCounter"></div>
+
+<!-- 键盘提示 -->
+<div class="keyboard-hint">
+  <span><span class="key">←</span><span class="key">→</span> 切换</span>
+  <span><span class="key">F</span> 全屏</span>
+</div>
+
+<!-- ===================================================== -->
+<!-- 幻灯片容器 -->
+<!-- ===================================================== -->
+<div class="slides-container" id="slidesContainer">
+
+  <!-- ====== 幻灯片 0：封面 ====== -->
+  <div class="slide active" id="slide-0">
+    <!-- 星星背景 -->
+    <canvas id="starCanvas" style="position:absolute;inset:0;pointer-events:none;"></canvas>
+
+    <div class="logo-wrap anim">
+      <div class="logo-icon">⭐</div>
+      <div class="cover-title">StarAnime</div>
+    </div>
+    <p class="cover-subtitle anim">团星云番剧视频平台</p>
+    <p class="cover-desc anim">
+      一个现代化的前后端分离番剧播放平台，支持高清视频播放、实时弹幕、
+      用户评论、收藏历史等完整功能体系，由团星云团队自主研发。
+    </p>
+    <div class="cover-tags anim">
+      <span class="tag tag-blue">Vue 3</span>
+      <span class="tag tag-gold">Node.js</span>
+      <span class="tag tag-green">MySQL</span>
+      <span class="tag tag-blue">Redis</span>
+      <span class="tag tag-gold">HLS 视频流</span>
+      <span class="tag tag-green">实时弹幕</span>
+      <span class="tag tag-blue">JWT 认证</span>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 1：项目概览 ====== -->
+  <div class="slide" id="slide-1">
+    <div class="slide-head anim">
+      <div class="section-title">PROJECT OVERVIEW</div>
+      <h1>项目概览</h1>
+      <p>前后端分离架构，完整覆盖番剧平台核心业务</p>
+    </div>
+    <div class="overview-grid">
+      <div class="overview-card anim" style="--accent-color: #1890ff">
+        <div class="overview-icon">🎬</div>
+        <h3>视频播放平台</h3>
+        <p>基于 HLS 协议的自适应视频流，支持 1080P / 720P / 480P 多分辨率切换，内置弹幕系统与评论互动。</p>
+      </div>
+      <div class="overview-card anim" style="--accent-color: #faad14">
+        <div class="overview-icon">🏗️</div>
+        <h3>前后端分离架构</h3>
+        <p>前端 Vue 3 SPA + 后端 Express RESTful API，Vite 构建工具极速开发体验，完整 CORS 跨域配置。</p>
+      </div>
+      <div class="overview-card anim" style="--accent-color: #52c41a">
+        <div class="overview-icon">👥</div>
+        <h3>完整用户体系</h3>
+        <p>注册登录、角色权限（普通用户 / 博主 / 运营 / 管理员）、个人中心、关注系统、身份认证。</p>
+      </div>
+      <div class="overview-card anim" style="--accent-color: #ff4d4f">
+        <div class="overview-icon">🛡️</div>
+        <h3>安全 & 高性能</h3>
+        <p>JWT + Redis 双重 Token 校验，bcrypt 密码加密，Redis 数据缓存加速，完整的管理后台。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 2：技术栈 ====== -->
+  <div class="slide" id="slide-2">
+    <div class="slide-head anim">
+      <div class="section-title">TECH STACK</div>
+      <h1>技术栈</h1>
+      <p>精选现代化开源技术，构建稳健的番剧平台</p>
+    </div>
+    <div class="tech-layout">
+      <!-- 前端 -->
+      <div class="tech-col anim">
+        <h3>🖥️ 前端技术</h3>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(65,184,131,0.15)">💚</div>
+          <div class="tech-info">
+            <strong>Vue 3</strong>
+            <span>Composition API · 渐进式框架</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:95%;background:#41b883"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(24,144,255,0.15)">🔷</div>
+          <div class="tech-info">
+            <strong>Vue Router 4</strong>
+            <span>SPA 路由管理</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:90%"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(250,173,20,0.15)">🍍</div>
+          <div class="tech-info">
+            <strong>Pinia</strong>
+            <span>新一代状态管理</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:88%;background:#faad14"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(96,138,255,0.15)">🎨</div>
+          <div class="tech-info">
+            <strong>Element Plus</strong>
+            <span>Vue 3 UI 组件库</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:92%;background:#608aff"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(188,255,0,0.1)">⚡</div>
+          <div class="tech-info">
+            <strong>Vite</strong>
+            <span>极速构建工具</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:90%;background:#bcff00"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(255,154,0,0.15)">🎞️</div>
+          <div class="tech-info">
+            <strong>ArtPlayer</strong>
+            <span>HLS 视频播放器</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:85%;background:#ff9a00"></div></div>
+          </div>
+        </div>
+      </div>
+      <!-- 后端 -->
+      <div class="tech-col anim">
+        <h3>⚙️ 后端技术</h3>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(82,196,26,0.15)">🟢</div>
+          <div class="tech-info">
+            <strong>Node.js + Express</strong>
+            <span>RESTful API 服务</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:95%;background:#52c41a"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(24,144,255,0.15)">🔵</div>
+          <div class="tech-info">
+            <strong>Sequelize ORM</strong>
+            <span>数据库对象映射</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:88%"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(255,128,0,0.15)">🐬</div>
+          <div class="tech-info">
+            <strong>MySQL</strong>
+            <span>关系型数据持久化</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:92%;background:#ff8000"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(255,77,79,0.15)">🔴</div>
+          <div class="tech-info">
+            <strong>Redis</strong>
+            <span>缓存 & Token 存储</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:85%;background:#ff4d4f"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(250,173,20,0.15)">🔑</div>
+          <div class="tech-info">
+            <strong>JWT + bcryptjs</strong>
+            <span>认证 & 密码加密</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:90%;background:#faad14"></div></div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-badge" style="background:rgba(82,196,26,0.15)">📦</div>
+          <div class="tech-info">
+            <strong>Multer + HLS</strong>
+            <span>文件上传 & 视频转码</span>
+          </div>
+          <div class="tech-bar-wrap">
+            <div class="tech-bar-bg"><div class="tech-bar" style="width:80%;background:#52c41a"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 3：核心功能 ====== -->
+  <div class="slide" id="slide-3">
+    <div class="slide-head anim">
+      <div class="section-title">CORE FEATURES</div>
+      <h1>核心功能</h1>
+      <p>完整的番剧平台功能矩阵</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card anim">
+        <div class="feature-icon">🎬</div>
+        <h3>HLS 视频播放</h3>
+        <p>基于 HLS 协议的自适应流媒体，支持多分辨率切换（1080P/720P/480P），播放进度实时同步。</p>
+        <div class="feature-tags">
+          <span class="tag tag-blue">ArtPlayer</span>
+          <span class="tag tag-gold">HLS.js</span>
+        </div>
+      </div>
+      <div class="feature-card anim">
+        <div class="feature-icon">💬</div>
+        <h3>实时弹幕系统</h3>
+        <p>支持滚动、顶部、底部三种弹幕类型，自定义颜色，发送时间精确到视频帧，弹幕实时覆盖。</p>
+        <div class="feature-tags">
+          <span class="tag tag-green">Danmaku</span>
+          <span class="tag tag-blue">REST API</span>
+        </div>
+      </div>
+      <div class="feature-card anim">
+        <div class="feature-icon">🔐</div>
+        <h3>用户认证体系</h3>
+        <p>JWT + Redis 双重验证，bcrypt 密码加密，支持用户名/邮箱双模式登录，Token 自动续期。</p>
+        <div class="feature-tags">
+          <span class="tag tag-gold">JWT</span>
+          <span class="tag tag-red">Redis</span>
+        </div>
+      </div>
+      <div class="feature-card anim">
+        <div class="feature-icon">⭐</div>
+        <h3>收藏 & 历史记录</h3>
+        <p>个人收藏管理、观看历史自动记录并保存进度，支持继续观看，历史记录分页展示。</p>
+        <div class="feature-tags">
+          <span class="tag tag-gold">Favorite</span>
+          <span class="tag tag-blue">History</span>
+        </div>
+      </div>
+      <div class="feature-card anim">
+        <div class="feature-icon">🔍</div>
+        <h3>番剧搜索 & 筛选</h3>
+        <p>支持标题、标签、简介全文模糊搜索，按类型/地区/年份筛选，播放量/评分/更新时间多维排序。</p>
+        <div class="feature-tags">
+          <span class="tag tag-blue">Sequelize</span>
+          <span class="tag tag-green">Op.like</span>
+        </div>
+      </div>
+      <div class="feature-card anim">
+        <div class="feature-icon">🛠️</div>
+        <h3>管理后台</h3>
+        <p>完整的运营管理系统，涵盖番剧管理、用户管理、评论审核、轮播图、公告、系统日志等。</p>
+        <div class="feature-tags">
+          <span class="tag tag-red">Admin</span>
+          <span class="tag tag-gold">RBAC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 4：系统架构 ====== -->
+  <div class="slide" id="slide-4">
+    <div class="slide-head anim">
+      <div class="section-title">ARCHITECTURE</div>
+      <h1>系统架构</h1>
+      <p>清晰的分层设计，各模块职责分明</p>
+    </div>
+    <div class="arch-wrap">
+      <div class="arch-layers">
+        <div class="arch-layer anim">
+          <span class="arch-label">用户层</span>
+          <div class="arch-items">
+            <div class="arch-item" style="background:rgba(24,144,255,0.1);border-color:rgba(24,144,255,0.3);color:#79c0ff">🌐 浏览器</div>
+            <div class="arch-item" style="background:rgba(24,144,255,0.1);border-color:rgba(24,144,255,0.3);color:#79c0ff">📱 移动端</div>
+          </div>
+        </div>
+        <div class="arch-arrow anim">↕ HTTP / HTTPS</div>
+        <div class="arch-layer anim">
+          <span class="arch-label">前端</span>
+          <div class="arch-items">
+            <div class="arch-item" style="background:rgba(65,184,131,0.1);border-color:rgba(65,184,131,0.3);color:#41b883">Vue 3 SPA</div>
+            <div class="arch-item" style="background:rgba(65,184,131,0.1);border-color:rgba(65,184,131,0.3);color:#41b883">Vue Router 4</div>
+            <div class="arch-item" style="background:rgba(65,184,131,0.1);border-color:rgba(65,184,131,0.3);color:#41b883">Pinia Store</div>
+            <div class="arch-item" style="background:rgba(65,184,131,0.1);border-color:rgba(65,184,131,0.3);color:#41b883">Element Plus</div>
+            <div class="arch-item" style="background:rgba(65,184,131,0.1);border-color:rgba(65,184,131,0.3);color:#41b883">ArtPlayer</div>
+          </div>
+        </div>
+        <div class="arch-arrow anim">↕ RESTful API (Axios / JSON)</div>
+        <div class="arch-layer anim">
+          <span class="arch-label">后端</span>
+          <div class="arch-items">
+            <div class="arch-item" style="background:rgba(250,173,20,0.1);border-color:rgba(250,173,20,0.3);color:#faad14">Express Router</div>
+            <div class="arch-item" style="background:rgba(250,173,20,0.1);border-color:rgba(250,173,20,0.3);color:#faad14">JWT Middleware</div>
+            <div class="arch-item" style="background:rgba(250,173,20,0.1);border-color:rgba(250,173,20,0.3);color:#faad14">Controllers</div>
+            <div class="arch-item" style="background:rgba(250,173,20,0.1);border-color:rgba(250,173,20,0.3);color:#faad14">Sequelize ORM</div>
+            <div class="arch-item" style="background:rgba(250,173,20,0.1);border-color:rgba(250,173,20,0.3);color:#faad14">Multer 上传</div>
+          </div>
+        </div>
+        <div class="arch-arrow anim">↕ 数据读写</div>
+        <div class="arch-layer anim">
+          <span class="arch-label">数据层</span>
+          <div class="arch-items">
+            <div class="arch-item" style="background:rgba(255,128,0,0.1);border-color:rgba(255,128,0,0.3);color:#ff8000">🐬 MySQL 持久化</div>
+            <div class="arch-item" style="background:rgba(255,77,79,0.1);border-color:rgba(255,77,79,0.3);color:#ff4d4f">🔴 Redis 缓存</div>
+            <div class="arch-item" style="background:rgba(82,196,26,0.1);border-color:rgba(82,196,26,0.3);color:#52c41a">📁 HLS 文件存储</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 5：核心代码 — JWT 认证 ====== -->
+  <div class="slide" id="slide-5">
+    <div class="slide-head anim">
+      <div class="section-title">CORE CODE · 01</div>
+      <h1>JWT + Redis 认证机制</h1>
+    </div>
+    <div class="code-slide-layout">
+      <div class="code-explain anim">
+        <h3>双重 Token 校验</h3>
+        <p>采用 JWT 签名验证 + Redis 存储双保险，确保 Token 注销即时生效，防止 Token 盗用。</p>
+        <ul class="explain-points">
+          <li><span class="bullet"></span>登录成功后生成 JWT，同时写入 Redis（key: <code style="color:#a5d6ff">token:{userId}</code>）</li>
+          <li><span class="bullet"></span>每次请求先验证 JWT 签名，再比对 Redis 中存储的 Token</li>
+          <li><span class="bullet"></span>退出登录时删除 Redis Key，原 Token 立即失效</li>
+          <li><span class="bullet"></span>支持 <code style="color:#a5d6ff">TokenExpiredError</code> 和 <code style="color:#a5d6ff">JsonWebTokenError</code> 精细化错误处理</li>
+          <li><span class="bullet"></span>用户 ID 挂载到 <code style="color:#a5d6ff">req.userId</code>，下游 Controller 直接使用</li>
+        </ul>
+      </div>
+      <div class="code-block anim">
+        <div class="code-header">
+          <span class="code-dot dot-red"></span>
+          <span class="code-dot dot-yellow"></span>
+          <span class="code-dot dot-green"></span>
+          <span class="code-filename">middlewares/auth.js</span>
+        </div>
+        <div class="code-body">
+<pre><span class="kw">const</span> <span class="var">jwt</span> = <span class="fn">require</span>(<span class="str">'jsonwebtoken'</span>)
+<span class="kw">const</span> <span class="var">redis</span> = <span class="fn">require</span>(<span class="str">'../config/redis'</span>)
+
+<span class="var">module</span>.<span class="prop">exports</span> = <span class="kw">async</span> (<span class="var">req</span>, <span class="var">res</span>, <span class="var">next</span>) <span class="op">=></span> {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> <span class="var">header</span> = <span class="var">req</span>.<span class="prop">headers</span>.<span class="prop">authorization</span>
+    <span class="kw">if</span> (!<span class="var">header</span>?.<span class="fn">startsWith</span>(<span class="str">'Bearer '</span>))
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ <span class="prop">message</span>: <span class="str">'请先登录'</span> })
+
+    <span class="kw">const</span> <span class="var">token</span> = <span class="var">header</span>.<span class="fn">split</span>(<span class="str">' '</span>)[<span class="num">1</span>]
+
+    <span class="cmt">// ① JWT 签名验证</span>
+    <span class="kw">const</span> <span class="var">decoded</span> = <span class="var">jwt</span>.<span class="fn">verify</span>(<span class="var">token</span>, <span class="var">process</span>.<span class="prop">env</span>.<span class="prop">JWT_SECRET</span>)
+
+    <span class="cmt">// ② Redis 存活校验（防注销后复用）</span>
+    <span class="kw">const</span> <span class="var">stored</span> = <span class="kw">await</span> <span class="var">redis</span>.<span class="fn">get</span>(<span class="str">`token:<span class="var">${decoded.userId}</span>`</span>)
+    <span class="kw">if</span> (!<span class="var">stored</span> || <span class="var">stored</span> !== <span class="var">token</span>)
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ <span class="prop">message</span>: <span class="str">'Token已失效'</span> })
+
+    <span class="var">req</span>.<span class="prop">userId</span> = <span class="var">decoded</span>.<span class="prop">userId</span>
+    <span class="fn">next</span>()
+  } <span class="kw">catch</span> (<span class="var">err</span>) {
+    <span class="kw">if</span> (<span class="var">err</span>.<span class="prop">name</span> === <span class="str">'TokenExpiredError'</span>)
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ <span class="prop">message</span>: <span class="str">'Token已过期'</span> })
+    <span class="var">res</span>.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({ <span class="prop">message</span>: <span class="str">'无效Token'</span> })
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 6：核心代码 — Redis 缓存 ====== -->
+  <div class="slide" id="slide-6">
+    <div class="slide-head anim">
+      <div class="section-title">CORE CODE · 02</div>
+      <h1>Redis 缓存加速策略</h1>
+    </div>
+    <div class="code-slide-layout">
+      <div class="code-explain anim">
+        <h3>番剧详情缓存</h3>
+        <p>番剧详情是高频读取、低频变更的数据，通过 Redis 缓存降低数据库压力，提升响应速度。</p>
+        <ul class="explain-points">
+          <li><span class="bullet"></span>缓存 Key 格式：<code style="color:#a5d6ff">bangumi:detail:{id}</code>，TTL 3600 秒</li>
+          <li><span class="bullet"></span>每次请求先查 Redis，命中则直接返回，跳过 MySQL 查询</li>
+          <li><span class="bullet"></span>缓存未命中时查库，并将结果序列化写入 Redis</li>
+          <li><span class="bullet"></span>同时对播放量 <code style="color:#a5d6ff">views</code> 执行原子 increment 操作，精准统计</li>
+          <li><span class="bullet"></span>编辑番剧时需主动删除对应缓存键，保证数据一致性</li>
+        </ul>
+      </div>
+      <div class="code-block anim">
+        <div class="code-header">
+          <span class="code-dot dot-red"></span>
+          <span class="code-dot dot-yellow"></span>
+          <span class="code-dot dot-green"></span>
+          <span class="code-filename">controllers/bangumiController.js</span>
+        </div>
+        <div class="code-body">
+<pre><span class="cmt">// 获取番剧详情（Redis 缓存）</span>
+<span class="var">exports</span>.<span class="prop">getDetail</span> = <span class="kw">async</span> (<span class="var">req</span>, <span class="var">res</span>) <span class="op">=></span> {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> { <span class="var">id</span> } = <span class="var">req</span>.<span class="prop">params</span>
+    <span class="kw">const</span> <span class="var">cacheKey</span> = <span class="str">`bangumi:detail:<span class="var">${id}</span>`</span>
+
+    <span class="cmt">// ① 优先读取 Redis 缓存</span>
+    <span class="kw">const</span> <span class="var">cached</span> = <span class="kw">await</span> <span class="var">redis</span>.<span class="fn">get</span>(<span class="var">cacheKey</span>)
+    <span class="kw">if</span> (<span class="var">cached</span>) {
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">json</span>({
+        <span class="prop">code</span>: <span class="num">200</span>,
+        <span class="prop">data</span>: <span class="var">JSON</span>.<span class="fn">parse</span>(<span class="var">cached</span>)
+      })
+    }
+
+    <span class="cmt">// ② 缓存未命中，查 MySQL</span>
+    <span class="kw">const</span> <span class="var">bangumi</span> = <span class="kw">await</span> <span class="var">Bangumi</span>.<span class="fn">findOne</span>({
+      <span class="prop">where</span>: { <span class="var">id</span>, <span class="prop">status</span>: <span class="num">1</span> }
+    })
+    <span class="kw">if</span> (!<span class="var">bangumi</span>)
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">json</span>({ <span class="prop">message</span>: <span class="str">'番剧不存在'</span> })
+
+    <span class="cmt">// ③ 播放量 +1（原子操作）</span>
+    <span class="kw">await</span> <span class="var">bangumi</span>.<span class="fn">increment</span>(<span class="str">'views'</span>)
+
+    <span class="cmt">// ④ 写入缓存，TTL = 1小时</span>
+    <span class="kw">await</span> <span class="var">redis</span>.<span class="fn">setEx</span>(<span class="var">cacheKey</span>, <span class="num">3600</span>,
+      <span class="var">JSON</span>.<span class="fn">stringify</span>(<span class="var">bangumi</span>))
+
+    <span class="var">res</span>.<span class="fn">json</span>({ <span class="prop">code</span>: <span class="num">200</span>, <span class="prop">data</span>: <span class="var">bangumi</span> })
+  } <span class="kw">catch</span> (<span class="var">err</span>) { ... }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 7：核心代码 — 弹幕 ====== -->
+  <div class="slide" id="slide-7">
+    <div class="slide-head anim">
+      <div class="section-title">CORE CODE · 03</div>
+      <h1>弹幕系统实现</h1>
+    </div>
+    <div class="code-slide-layout">
+      <div class="code-explain anim">
+        <h3>实时弹幕发送</h3>
+        <p>弹幕按视频时间轴精确绑定到剧集，支持三种展现类型和自定义颜色，完整的校验保障内容安全。</p>
+        <ul class="explain-points">
+          <li><span class="bullet"></span>弹幕绑定 <code style="color:#a5d6ff">episode_id</code> + <code style="color:#a5d6ff">time</code>（秒级精度），按时间升序返回</li>
+          <li><span class="bullet"></span>类型：<code style="color:#a5d6ff">0-滚动</code> / <code style="color:#a5d6ff">1-顶部固定</code> / <code style="color:#a5d6ff">2-底部固定</code></li>
+          <li><span class="bullet"></span>支持 <code style="color:#a5d6ff">hex</code> 颜色值自定义，默认白色 <code style="color:#a5d6ff">#ffffff</code></li>
+          <li><span class="bullet"></span>内容限 100 字，服务端严格校验非空、长度、时间合法性</li>
+          <li><span class="bullet"></span>获取弹幕无需登录，发送弹幕需 JWT 认证</li>
+        </ul>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+          <div style="padding:8px 14px;background:rgba(24,144,255,0.1);border:1px solid rgba(24,144,255,0.2);border-radius:8px;font-size:12px">
+            <div style="color:var(--text2);margin-bottom:2px">GET 获取弹幕</div>
+            <code style="color:#a5d6ff;font-size:11px">/api/bangumi/:bId/episode/:eId/danmaku</code>
+          </div>
+          <div style="padding:8px 14px;background:rgba(82,196,26,0.1);border:1px solid rgba(82,196,26,0.2);border-radius:8px;font-size:12px">
+            <div style="color:var(--text2);margin-bottom:2px">POST 发送弹幕</div>
+            <code style="color:#52c41a;font-size:11px">/api/user/danmaku</code>
+          </div>
+        </div>
+      </div>
+      <div class="code-block anim">
+        <div class="code-header">
+          <span class="code-dot dot-red"></span>
+          <span class="code-dot dot-yellow"></span>
+          <span class="code-dot dot-green"></span>
+          <span class="code-filename">controllers/danmakuController.js</span>
+        </div>
+        <div class="code-body">
+<pre><span class="cmt">// 发送弹幕（需登录）</span>
+<span class="var">exports</span>.<span class="prop">send</span> = <span class="kw">async</span> (<span class="var">req</span>, <span class="var">res</span>) <span class="op">=></span> {
+  <span class="kw">const</span> <span class="var">userId</span> = <span class="var">req</span>.<span class="prop">userId</span>
+  <span class="kw">const</span> {
+    <span class="var">episode_id</span>, <span class="var">time</span>, <span class="var">text</span>,
+    <span class="var">color</span> = <span class="str">'#ffffff'</span>, <span class="var">type</span> = <span class="num">0</span>
+  } = <span class="var">req</span>.<span class="prop">body</span>
+
+  <span class="cmt">// ① 参数校验</span>
+  <span class="kw">if</span> (!<span class="var">text</span>?.<span class="fn">trim</span>())
+    <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="prop">msg</span>: <span class="str">'内容不能为空'</span> })
+  <span class="kw">if</span> (<span class="var">text</span>.<span class="fn">trim</span>().<span class="prop">length</span> > <span class="num">100</span>)
+    <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="prop">msg</span>: <span class="str">'不能超过100字'</span> })
+  <span class="kw">if</span> (![<span class="num">0</span>,<span class="num">1</span>,<span class="num">2</span>].<span class="fn">includes</span>(<span class="var">Number</span>(<span class="var">type</span>)))
+    <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="prop">msg</span>: <span class="str">'类型无效'</span> })
+
+  <span class="cmt">// ② 写入数据库</span>
+  <span class="kw">const</span> <span class="var">dm</span> = <span class="kw">await</span> <span class="var">Danmaku</span>.<span class="fn">create</span>({
+    <span class="prop">episode_id</span>, <span class="var">user_id</span>: <span class="var">userId</span>,
+    <span class="prop">time</span>: <span class="fn">parseFloat</span>(<span class="var">time</span>),
+    <span class="prop">text</span>: <span class="var">text</span>.<span class="fn">trim</span>(),
+    <span class="var">color</span>, <span class="prop">type</span>: <span class="fn">Number</span>(<span class="var">type</span>)
+  })
+
+  <span class="var">res</span>.<span class="fn">json</span>({ <span class="prop">code</span>: <span class="num">200</span>, <span class="prop">message</span>: <span class="str">'发送成功'</span>,
+    <span class="prop">data</span>: { <span class="prop">id</span>: <span class="var">dm</span>.<span class="prop">id</span>, <span class="prop">time</span>: <span class="var">dm</span>.<span class="prop">time</span>,
+             <span class="prop">text</span>: <span class="var">dm</span>.<span class="prop">text</span>, <span class="prop">color</span>: <span class="var">dm</span>.<span class="prop">color</span> }
+  })
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 8：核心代码 — HLS 视频 ====== -->
+  <div class="slide" id="slide-8">
+    <div class="slide-head anim">
+      <div class="section-title">CORE CODE · 04</div>
+      <h1>HLS 多分辨率视频流</h1>
+    </div>
+    <div class="code-slide-layout">
+      <div class="code-explain anim">
+        <h3>自适应视频流检测</h3>
+        <p>系统自动扫描 HLS 文件目录，构建多分辨率清单，优先返回最高清晰度，无需硬编码配置。</p>
+        <ul class="explain-points">
+          <li><span class="bullet"></span>服务端扫描 <code style="color:#a5d6ff">uploads/hls/{episodeId}/</code> 目录</li>
+          <li><span class="bullet"></span>自动识别 <code style="color:#a5d6ff">1080p / 720p / 480p / 360p</code> 各分辨率 m3u8</li>
+          <li><span class="bullet"></span>优先使用 <code style="color:#a5d6ff">master.m3u8</code>，无则用最高分辨率代替</li>
+          <li><span class="bullet"></span>支持数据库存储的多分辨率 <code style="color:#a5d6ff">video_urls</code> JSON 字段</li>
+          <li><span class="bullet"></span>前端 ArtPlayer + HLS.js 无缝接入，支持实时分辨率切换</li>
+        </ul>
+        <div style="margin-top:16px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">目录结构</div>
+          <div style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:var(--code-font);font-size:12px;line-height:1.8;color:#8b949e">
+            uploads/hls/<span style="color:#a5d6ff">{episodeId}</span>/<br>
+            ├── <span style="color:#79c0ff">master.m3u8</span><br>
+            ├── <span style="color:#79c0ff">1080p.m3u8</span><br>
+            ├── <span style="color:#79c0ff">720p.m3u8</span><br>
+            ├── <span style="color:#79c0ff">480p.m3u8</span><br>
+            └── <span style="color:#8b949e">*.ts  (分片文件)</span>
+          </div>
+        </div>
+      </div>
+      <div class="code-block anim">
+        <div class="code-header">
+          <span class="code-dot dot-red"></span>
+          <span class="code-dot dot-yellow"></span>
+          <span class="code-dot dot-green"></span>
+          <span class="code-filename">controllers/bangumiController.js</span>
+        </div>
+        <div class="code-body">
+<pre><span class="kw">const</span> <span class="var">QUALITY_ORDER</span> = [<span class="str">'1080p'</span>,<span class="str">'720p'</span>,<span class="str">'480p'</span>,<span class="str">'360p'</span>]
+
+<span class="kw">function</span> <span class="fn">detectHLS</span>(<span class="var">episodeId</span>) {
+  <span class="kw">const</span> <span class="var">dir</span> = <span class="var">path</span>.<span class="fn">join</span>(<span class="var">HLS_ROOT</span>, <span class="fn">String</span>(<span class="var">episodeId</span>))
+  <span class="kw">if</span> (!<span class="var">fs</span>.<span class="fn">existsSync</span>(<span class="var">dir</span>))
+    <span class="kw">return</span> { <span class="prop">hls_url</span>: <span class="kw">null</span>, <span class="prop">qualities</span>: [] }
+
+  <span class="cmt">// 扫描各分辨率 m3u8 文件</span>
+  <span class="kw">const</span> <span class="var">qualities</span> = []
+  <span class="kw">for</span> (<span class="kw">const</span> <span class="var">label</span> <span class="kw">of</span> <span class="var">QUALITY_ORDER</span>) {
+    <span class="kw">const</span> <span class="var">m3u8</span> = <span class="var">path</span>.<span class="fn">join</span>(<span class="var">dir</span>, <span class="str">`<span class="var">${label}</span>.m3u8`</span>)
+    <span class="kw">if</span> (<span class="var">fs</span>.<span class="fn">existsSync</span>(<span class="var">m3u8</span>)) {
+      <span class="var">qualities</span>.<span class="fn">push</span>({
+        <span class="prop">label</span>: <span class="var">label</span>.<span class="fn">replace</span>(<span class="str">'p'</span>, <span class="str">'P'</span>),
+        <span class="prop">url</span>: <span class="str">`/uploads/hls/<span class="var">${episodeId}</span>/<span class="var">${label}</span>.m3u8`</span>,
+        <span class="prop">default</span>: <span class="var">qualities</span>.<span class="prop">length</span> === <span class="num">0</span>
+      })
+    }
+  }
+  <span class="kw">if</span> (<span class="var">qualities</span>.<span class="prop">length</span> === <span class="num">0</span>)
+    <span class="kw">return</span> { <span class="prop">hls_url</span>: <span class="kw">null</span>, <span class="prop">qualities</span>: [] }
+
+  <span class="kw">const</span> <span class="var">hasMaster</span> = <span class="var">fs</span>.<span class="fn">existsSync</span>(
+    <span class="var">path</span>.<span class="fn">join</span>(<span class="var">dir</span>, <span class="str">'master.m3u8'</span>))
+  <span class="kw">return</span> {
+    <span class="prop">hls_url</span>: <span class="var">hasMaster</span>
+      ? <span class="str">`/uploads/hls/<span class="var">${episodeId}</span>/master.m3u8`</span>
+      : <span class="var">qualities</span>[<span class="num">0</span>].<span class="prop">url</span>,
+    <span class="var">qualities</span>
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 9：数据库设计 ====== -->
+  <div class="slide" id="slide-9">
+    <div class="slide-head anim">
+      <div class="section-title">DATABASE DESIGN</div>
+      <h1>数据库设计</h1>
+      <p>20 张数据表，覆盖完整业务模型</p>
+    </div>
+    <div class="db-grid">
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#1890ff;border-color:rgba(24,144,255,0.3);background:rgba(24,144,255,0.05)">👤 user</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">username</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">email</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">password</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">role</span><span class="db-field-type">TINYINT</span></div>
+          <div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">TINYINT</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#faad14;border-color:rgba(250,173,20,0.3);background:rgba(250,173,20,0.05)">🎬 bangumi</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">title</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">cover</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">type</span><span class="db-field-type">TINYINT</span></div>
+          <div class="db-field"><span class="db-field-name">views</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">rating</span><span class="db-field-type">FLOAT</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#52c41a;border-color:rgba(82,196,26,0.3);background:rgba(82,196,26,0.05)">📺 episode</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">bangumi_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">episode_number</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">video_url</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">video_urls</span><span class="db-field-type">JSON</span></div>
+          <div class="db-field"><span class="db-field-name">views</span><span class="db-field-type">INT</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#ff4d4f;border-color:rgba(255,77,79,0.3);background:rgba(255,77,79,0.05)">💬 danmaku</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">episode_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">time</span><span class="db-field-type">FLOAT</span></div>
+          <div class="db-field"><span class="db-field-name">text</span><span class="db-field-type">VARCHAR</span></div>
+          <div class="db-field"><span class="db-field-name">type</span><span class="db-field-type">TINYINT</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#d2a8ff;border-color:rgba(210,168,255,0.3);background:rgba(210,168,255,0.05)">⭐ favorite</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">bangumi_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">DATE</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#79c0ff;border-color:rgba(121,192,255,0.3);background:rgba(121,192,255,0.05)">🕐 watch_history</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">episode_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">progress</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">updated_at</span><span class="db-field-type">DATE</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#ffa657;border-color:rgba(255,166,87,0.3);background:rgba(255,166,87,0.05)">💭 comment</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="pk-badge">PK</span><span class="db-field-name">id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-type">INT FK</span></div>
+          <div class="db-field"><span class="db-field-name">target_type</span><span class="db-field-type">ENUM</span></div>
+          <div class="db-field"><span class="db-field-name">target_id</span><span class="db-field-type">INT</span></div>
+          <div class="db-field"><span class="db-field-name">content</span><span class="db-field-type">TEXT</span></div>
+        </div>
+      </div>
+      <div class="db-table anim">
+        <div class="db-table-header" style="color:#8b949e;border-color:rgba(139,148,158,0.3);background:rgba(139,148,158,0.05)">📋 更多数据表</div>
+        <div class="db-table-body">
+          <div class="db-field"><span class="db-field-name">rating</span><span class="db-field-type">评分</span></div>
+          <div class="db-field"><span class="db-field-name">banner</span><span class="db-field-type">轮播图</span></div>
+          <div class="db-field"><span class="db-field-name">user_follow</span><span class="db-field-type">关注</span></div>
+          <div class="db-field"><span class="db-field-name">announcement</span><span class="db-field-type">公告</span></div>
+          <div class="db-field"><span class="db-field-name">system_log</span><span class="db-field-type">系统日志</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 10：页面路由 ====== -->
+  <div class="slide" id="slide-10">
+    <div class="slide-head anim">
+      <div class="section-title">FRONTEND PAGES</div>
+      <h1>前端页面路由</h1>
+      <p>单页应用，10+ 核心页面，清晰的路由结构</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:900px;">
+      <div class="anim">
+        <h3 style="font-size:14px;color:var(--text2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">📄 用户端页面</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">🏠 首页</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">📋 番剧列表</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/bangumi</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">📖 番剧详情</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/bangumi/:id</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">🎬 视频播放</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/play/:bId/:eId</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">🔍 搜索</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/search</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">👤 个人中心</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/user</code>
+          </div>
+        </div>
+      </div>
+      <div class="anim">
+        <h3 style="font-size:14px;color:var(--text2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">🛠️ 管理后台</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">📊 数据概览</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/dashboard</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">🎬 番剧管理</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/bangumi</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">👥 用户管理</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/users</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">💬 评论管理</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/comments</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">📝 系统日志</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/logs</code>
+          </div>
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">⚙️ 系统设置</span>
+            <code style="font-size:11px;color:#8b949e;background:#0d1117;padding:2px 8px;border-radius:4px">/admin/settings</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 11：总结 ====== -->
+  <div class="slide" id="slide-11">
+    <div class="slide-head anim">
+      <div class="section-title">SUMMARY</div>
+      <h1>项目总结</h1>
+      <p>完整、可扩展的现代番剧平台</p>
+    </div>
+    <div class="summary-grid">
+      <div class="stat-card anim">
+        <div class="stat-num">20+</div>
+        <div class="stat-label">数据表设计</div>
+      </div>
+      <div class="stat-card anim">
+        <div class="stat-num">30+</div>
+        <div class="stat-label">RESTful 接口</div>
+      </div>
+      <div class="stat-card anim">
+        <div class="stat-num">10+</div>
+        <div class="stat-label">前端页面</div>
+      </div>
+    </div>
+    <div class="roadmap anim" style="margin-top:28px">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">🚀 已实现功能清单</div>
+      <div class="roadmap-item">
+        <div class="roadmap-dot" style="background:#52c41a"></div>
+        <div>
+          <h4>视频播放核心</h4>
+          <p>HLS 多分辨率流 · ArtPlayer · 进度记录 · 弹幕覆盖</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-dot" style="background:#1890ff"></div>
+        <div>
+          <h4>用户体系</h4>
+          <p>注册登录 · JWT认证 · 四级角色权限 · 收藏/历史</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-dot" style="background:#faad14"></div>
+        <div>
+          <h4>内容互动</h4>
+          <p>评论 · 弹幕 · 番剧评分 · 用户关注</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-dot" style="background:#ff4d4f"></div>
+        <div>
+          <h4>运营管理</h4>
+          <p>完整后台 · 番剧申请 · 用户禁封 · 系统公告 · 系统日志</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 幻灯片 12：结尾 ====== -->
+  <div class="slide" id="slide-12">
+    <canvas id="endCanvas" style="position:absolute;inset:0;pointer-events:none;"></canvas>
+    <div style="text-align:center;z-index:1">
+      <div class="anim" style="font-size:64px;margin-bottom:16px">⭐</div>
+      <h1 class="anim" style="font-size:48px;font-weight:800;background:linear-gradient(135deg,#fff,#1890ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px">
+        StarAnime
+      </h1>
+      <p class="anim" style="font-size:18px;color:var(--text2);margin-bottom:8px">团星云番剧平台</p>
+      <p class="anim" style="font-size:14px;color:var(--text3);margin-bottom:36px">前后端分离 · 高性能 · 完整功能</p>
+      <div class="anim" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+        <div style="padding:12px 24px;background:rgba(24,144,255,0.1);border:1px solid rgba(24,144,255,0.3);border-radius:8px;font-size:13px;color:#79c0ff">
+          🌐 前端：Vue 3 + Vite
+        </div>
+        <div style="padding:12px 24px;background:rgba(82,196,26,0.1);border:1px solid rgba(82,196,26,0.3);border-radius:8px;font-size:13px;color:#52c41a">
+          ⚙️ 后端：Node.js + Express
+        </div>
+        <div style="padding:12px 24px;background:rgba(250,173,20,0.1);border:1px solid rgba(250,173,20,0.3);border-radius:8px;font-size:13px;color:#faad14">
+          🗄️ 数据：MySQL + Redis
+        </div>
+      </div>
+      <p class="anim" style="margin-top:40px;font-size:13px;color:var(--text3)">
+        Copyright © 2024 StarAnime · 团星云 · MIT License
+      </p>
+    </div>
+  </div>
+
+</div><!-- /slides-container -->
+
+<script>
+// ===== 幻灯片逻辑 =====
+const TOTAL = 13
+let current = 0
+
+function navigate(dir) {
+  const next = current + dir
+  if (next < 0 || next >= TOTAL) return
+  goTo(next)
+}
+
+function goTo(idx) {
+  const slides = document.querySelectorAll('.slide')
+  slides[current].classList.remove('active')
+  slides[current].classList.add('prev')
+
+  setTimeout(() => {
+    slides[current].classList.remove('prev')
+    current = idx
+    slides[current].classList.add('active')
+    updateUI()
+  }, 10)
+  current = idx
+  slides[current].classList.add('active')
+  updateUI()
+}
+
+function updateUI() {
+  // 进度条
+  document.getElementById('progressBar').style.width =
+    ((current / (TOTAL - 1)) * 100) + '%'
+  // 按钮
+  document.getElementById('prevBtn').disabled = current === 0
+  document.getElementById('nextBtn').disabled = current === TOTAL - 1
+  // 计数器
+  document.getElementById('slideCounter').textContent =
+    (current + 1) + ' / ' + TOTAL
+  // 点
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === current)
+  })
+  // 特殊效果
+  if (current === 0) initStars('starCanvas')
+  if (current === TOTAL - 1) initStars('endCanvas')
+}
+
+// 初始化指示点
+const dotsEl = document.getElementById('slideDots')
+for (let i = 0; i < TOTAL; i++) {
+  const d = document.createElement('div')
+  d.className = 'dot' + (i === 0 ? ' active' : '')
+  d.onclick = () => goTo(i)
+  dotsEl.appendChild(d)
+}
+updateUI()
+
+// 键盘控制
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1)
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1)
+  if (e.key === 'f' || e.key === 'F') {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen()
+    else document.exitFullscreen()
+  }
+})
+
+// 触摸滑动
+let touchStartX = 0
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX })
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX
+  if (dx > 50) navigate(-1)
+  if (dx < -50) navigate(1)
+})
+
+// ===== 星星特效 =====
+function initStars(canvasId) {
+  const canvas = document.getElementById(canvasId)
+  if (!canvas || canvas._inited) return
+  canvas._inited = true
+  const ctx = canvas.getContext('2d')
+  
+  function resize() {
+    canvas.width = canvas.offsetWidth
+    canvas.height = canvas.offsetHeight
+  }
+  resize()
+  
+  const stars = Array.from({ length: 120 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random(),
+    da: (Math.random() - 0.5) * 0.02,
+    vx: (Math.random() - 0.5) * 0.2,
+    vy: (Math.random() - 0.5) * 0.2
+  }))
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    stars.forEach(s => {
+      s.a += s.da
+      if (s.a <= 0 || s.a >= 1) s.da *= -1
+      s.x += s.vx; s.y += s.vy
+      if (s.x < 0) s.x = canvas.width
+      if (s.x > canvas.width) s.x = 0
+      if (s.y < 0) s.y = canvas.height
+      if (s.y > canvas.height) s.y = 0
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(255,255,255,${s.a * 0.8})`
+      ctx.fill()
+    })
+    requestAnimationFrame(draw)
+  }
+  draw()
+  window.addEventListener('resize', resize)
+}
+
+// 初始化首页星星
+initStars('starCanvas')
+</script>
+
+</body>
+</html>
